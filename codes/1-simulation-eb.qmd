@@ -7,6 +7,8 @@ format: html
 library(laeken)
 library(survey)
 library(ebal)
+library(IPS)
+library(spatstat.geom)
 ```
 
 
@@ -57,10 +59,6 @@ sapply(as.data.frame(X[treatment == 0, ]), FUN=quantile,
 sapply(as.data.frame(X[treatment == 0, ]), FUN=weightedQuantile, 
        probs = c(0.25, 0.5, 0.75), weights = res$w)  
 
-colMeans(X[treatment == 0, ])
-sapply(as.data.frame(X[treatment == 0, ]), FUN=weighted.mean, weights = res$w) 
-
-
 ```
 Deciles
 
@@ -91,5 +89,36 @@ perc_c <- sapply(as.data.frame(X[treatment == 0, ]),
                  weights = res_p$w) 
 
 perc_t-perc_c
+```
+```{r}
+colMeans(X[treatment == 1, ])
+colSums(X[treatment == 0, ]*res_p$w) / sum(res_p$w)
+```
+
+```{r}
+ips_eb <- IPS_exp(d = treatment, x = cbind(1, X))
+ips_eb2 <- IPS_ind(d = treatment, x = cbind(1, X))
+ips_eb3 <- IPS_proj(d = treatment, x = cbind(1, X))
+
+colMeans(X[treatment == 1, ])
+sapply(as.data.frame(X[treatment == 0, ]), FUN=weighted.mean, weights = ips_eb$fitted.values[treatment == 0]) 
+
+perc_c2 <- sapply(as.data.frame(X[treatment == 0, ]), 
+                  FUN=weightedQuantile, 
+                  probs = seq(0.1, 0.9, 0.1),  
+                  weights = ips_eb3$fitted.values[treatment == 0]) 
+```
+
+```{r}
+perc_t-perc_c
+perc_t-perc_c2
+```
+```{r}
+m0 <- ewcdf(X[treatment == 1, 2])
+m1 <- ewcdf(X[treatment == 0, 2], res_p$w)
+m2 <- ewcdf(X[treatment == 0, 2], ips_eb3$fitted.values[treatment == 0])
+plot(m0)
+plot(m1, add = TRUE, col = "red")
+plot(m2, add = TRUE, col = "blue")
 ```
 

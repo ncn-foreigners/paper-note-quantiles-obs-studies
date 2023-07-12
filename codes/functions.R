@@ -30,7 +30,7 @@ calib_quantiles <- function(X=NULL, X_q, d, N, totals=NULL, totals_q,
                             method = c("raking", "linear", "logit"), 
                             ...) {
   
-  #stopifnot("If Z is provided then backend should be `sampling`" = NROW(Z) > 0 & backend == "sampling") 
+  stopifnot("Only `sampling` or `laeken` are possible backends" = backend %in% c("sampling", "laeken"))
   
   ## quantiles
   names(totals_q) <- NULL
@@ -60,5 +60,7 @@ calib_quantiles <- function(X=NULL, X_q, d, N, totals=NULL, totals_q,
     w_res <- laeken::calibWeights(X=X, d= d, totals = T_mat, method = method, ...)
   }
   w <- w_res*d
+  ## add reporting of differences
+  
   return(list(w=w, Xs = X, totals = T_mat, diff = colSums(X*w) - T_mat))
 }
