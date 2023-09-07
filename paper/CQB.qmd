@@ -1,0 +1,33 @@
+---
+title: "Survey methodology for causal inference: A simple and robust covariate and quantile balancing method"
+author: "Maciej"
+format: html
+---
+
+
+```{r}
+library(ebal) ## entropy balancing
+library(IPS) ## propensity balancing
+## functions from econometrica 
+```
+
+# Introduction 
+
+In this paper we propose a simple and robust method for moments and quantile balancing method for causal infrence based on the theory of calibration estimators for totals (Sarndal and Deville 1992) and quantiles (Harms and Duschene 2006). The method can be applied to arbitrary number of covariates and their quantiles. We provide extensions to propensity score weighting and synthetic control methods. For the linear distance function we may derive an analytical form of weights but in order to ensure positive weights . The method is simple to implement using existing procedures in R, Stata or Python.
+
+
+# Calibration
+
+# Calibration with quantiles
+
+# Propenstiy score
+
+Based on integration but here it is not needed
+
+$$
+\sum_{i \in A} \frac{\boldsymbol{h}_i}{\pi(\boldsymbol{h}_i; \boldsymbol{\gamma})} = \sum_{k \in B} \boldsymbol{h}_k
+$$
+
+# Synthetic control
+
+

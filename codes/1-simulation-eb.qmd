@@ -3,122 +3,93 @@ title: "Untitled"
 format: html
 ---
 
+# Load packages
+
 ```{r}
-library(laeken)
-library(survey)
+library(jointCalib)
 library(ebal)
-library(IPS)
-library(spatstat.geom)
+library(MASS)
+library(data.table)
+library(ggplot2)
+library(laeken)
 ```
-
-
 ```{r}
 source("functions.R")
 ```
 
-Simple simulation - based on manual
+# Simulation from the paper
+
+Generate data 
 
 ```{r}
-set.seed(2023-07-11)
-n_0 <- 500
-n_1 <- 300
-treatment   <- c(rep(0,n_0), rep(1,n_1))
-X <- rbind(
-  sapply(1:3, FUN=function(x) rnorm(n_0, 0)),
-  sapply(1:3, FUN=function(x) rnorm(n_1, .5))
-)
-X <- as.matrix(X)
-colnames(X) <- paste("x",1:3,sep="")
-head(X)
-```
+set.seed(123)
+N <- 2000 ## population size
+n_t <- c(300, 600, 1500) ## treated units 
+n_c1 <- n_t*1
+n_c2 <- n_t*2
+n_c3 <- n_t*5
+epsilon1 <- rnorm(N, 0, 30)
+epsilon2 <- rnorm(N, 0, 100)
+epsilon3 <- rchisq(N, 5)
+desired_mean <- 0.5
+desired_var <- 67.6
+current_mean <- mean(epsilon3)
+current_var <- var(epsilon3)
+epsilon3_scaled <- sqrt(desired_var / current_var) * (epsilon3 - current_mean) + desired_mean
 
-Simple simulation
+x<-MASS::mvrnorm(n=N, 
+                 mu = c(0,0,0), 
+                 Sigma = matrix(c(2, 1, -1, 1, 1, -0.5, -1, -0.5, 1),3,3))
+x1 <- x[,1]
+x2 <- x[,2]
+x3 <- x[,3]
+x4 <- runif(N, -3, 3)
+x5 <- rchisq(N, 1)
+x6 <- rbinom(N, 1, 0.5)
+d1 <- x1 +2*x2-2*x3-x4-0.5*x5+x6 + epsilon1
+d2 <- x1 +2*x2-2*x3-x4-0.5*x5+x6 + epsilon2
+d3 <- x1 +2*x2-2*x3-x4-0.5*x5+x6 + epsilon3_scaled
+eta <- rnorm(N)
+y1 <- x1 + x2 + x3 - x4 + x5 + x6 + eta 
+y2 <- x1 + x2 + 0.2*x3*x4 - sqrt(x5) + eta
+y3 <- (x1+x2+x3)^2 + eta
 
-```{r}
-res <- calib_quantiles(
-  X = X[treatment == 0, ],
-  X_q = X[treatment == 0, ], 
-  d = rep(1, n_0),
-  N = n_1, 
-  totals = colSums(X[treatment == 1, ]),
-  totals_q = lapply(as.data.frame(X[treatment == 1, ]), 
-                    FUN=quantile, probs = c(0.25, 0.5, 0.75)),
-  backend = "sampling", 
-  method = "raking"
-)
-```
+probs_perc <- seq(0.1,0.9,0.1)
+probs_quar <- c(0.25,0.50,0.75)
+vars <- paste0("x", 1:6)
+data_sim <- data.frame(x1,x2,x3,x4,x5,x6, 
+                       d1, 
+                       d2,
+                       d3, 
+                       y1, y2, y3) |> 
+  setDT() |> 
+  melt(id.vars = c(vars, "y1", "y2", "y3"), value.name = "eta", variable.name = "design") |> 
+  transform(design = as.numeric(design))
 
-```{r}
-sapply(as.data.frame(X[treatment == 1, ]), FUN=quantile, probs = c(0.25, 0.5, 0.75))
-```
 
-```{r}
-sapply(as.data.frame(X[treatment == 0, ]), FUN=quantile, 
-       probs = c(0.25, 0.5, 0.75))
-
-sapply(as.data.frame(X[treatment == 0, ]), FUN=weightedQuantile, 
-       probs = c(0.25, 0.5, 0.75), weights = res$w)  
-
-```
-Deciles
-
-```{r}
-res_p <- calib_quantiles(
-  X = X[treatment == 0, ], ## control X (for means)
-  X_q = X[treatment == 0, ],  ## control X (for quantiles)
-  d = rep(1, n_0), ## initial weight
-  N = n_1,  ## size of treatment group
-  totals = colSums(X[treatment == 1, ]), ## totals for treatment
-  totals_q = lapply(as.data.frame(X[treatment == 1, ]),  
-                    FUN=quantile, probs = seq(0.1, 0.9, 0.1)), ## quantiles for treatment
-  backend = "laeken", 
-  method = "logit",
-  bounds = c(0, 10),
-  tol = 1e-10
-)
 ```
 
 ```{r}
-perc_t <- sapply(as.data.frame(X[treatment == 1, ]), FUN=quantile, probs = seq(0.1, 0.9, 0.1))
+res_patt <- list() 
+for (b in 1:500) {
+  set.seed(b)
+  data_sim[, flag:=rbinom(nrow(data_sim), 1, prob = pnorm(eta))]
+  res_patt[[b]] <- eb_sim(data = data_sim, type = 3)
+}
+
+res_patt_df <- rbindlist(res_patt, id = "iter")
+res_patt_df[,est:=factor(est, c("naive", "eb", "qrak", "qeb", "qrak_only"))]
+melt(res_patt_df, id.vars = c("iter", "est", "des"), value.var = "bias", variable.name = "y") |> 
+  ggplot(data = _, aes(x = est, y = value)) +
+  geom_jitter(alpha = 0.1) + 
+  geom_violin(scale = "width", draw_quantiles = c(0.25,0.5,0.75)) +
+  stat_summary(fun = mean, geom = "point", col = "red") + 
+  facet_wrap(~y) +
+  geom_hline(yintercept = 0, linetype= "dashed", color = "red")
 ```
 
 ```{r}
-perc_c <- sapply(as.data.frame(X[treatment == 0, ]), 
-                 FUN=weightedQuantile, 
-                 probs = seq(0.1, 0.9, 0.1), 
-                 weights = res_p$w) 
-
-perc_t-perc_c
-```
-```{r}
-colMeans(X[treatment == 1, ])
-colSums(X[treatment == 0, ]*res_p$w) / sum(res_p$w)
-```
-
-```{r}
-ips_eb <- IPS_exp(d = treatment, x = cbind(1, X))
-ips_eb2 <- IPS_ind(d = treatment, x = cbind(1, X))
-ips_eb3 <- IPS_proj(d = treatment, x = cbind(1, X))
-
-colMeans(X[treatment == 1, ])
-sapply(as.data.frame(X[treatment == 0, ]), FUN=weighted.mean, weights = ips_eb$fitted.values[treatment == 0]) 
-
-perc_c2 <- sapply(as.data.frame(X[treatment == 0, ]), 
-                  FUN=weightedQuantile, 
-                  probs = seq(0.1, 0.9, 0.1),  
-                  weights = ips_eb3$fitted.values[treatment == 0]) 
-```
-
-```{r}
-perc_t-perc_c
-perc_t-perc_c2
-```
-```{r}
-m0 <- ewcdf(X[treatment == 1, 2])
-m1 <- ewcdf(X[treatment == 0, 2], res_p$w)
-m2 <- ewcdf(X[treatment == 0, 2], ips_eb3$fitted.values[treatment == 0])
-plot(m0)
-plot(m1, add = TRUE, col = "red")
-plot(m2, add = TRUE, col = "blue")
+res_patt_df[, lapply(.SD, mean), est, .SDcols = patterns("y")]
+res_patt_df[, lapply(.SD, function(x) sqrt(mean(x)^2 + var(x))), est, .SDcols = patterns("y")]
 ```
 

@@ -1,0 +1,108 @@
+---
+title: "2-ps-sim"
+format: html
+---
+
+# Install required packages
+
+Install packages according using the following codes
+
+```{r installation, eval = FALSE}
+install.packages("remotes")
+remotes::install_github("ncn-foreigners/jointCalib")
+remotes::install_github("ncn-foreigners/nonprobsvy")
+remotes::install_github("pedrohcgs/IPS")
+```
+
+
+# Load required packages
+
+Load required packages and functions 
+```{r}
+library(nonprobsvy)
+library(jointCalib)
+library(IPS)
+library(CBPS)
+```
+
+Functions taken from
+
+```{r}
+source("functions.R")
+```
+
+
+# One step - showcase
+
+## correctly specified propensity score
+
+```{r}
+set.seed(123)
+data_sim1 <- dgps_ips(n = 500, dgp=1)
+head(data_sim1)
+```
+
+```{r}
+fit.cbps <- CBPS::CBPS(formula = Treat ~ X1 + X2 + X3 + X4,
+                       data = data_sim1,
+                       ATT = 0,
+                       twostep = T, standardize = F, method = "exact")
+
+
+sum(data_sim1$Treat*data_sim1$Y/fit.cbps$fitted.values)/sum(data_sim1$Treat/fit.cbps$fitted.values)
+
+fit.cbps2 <- CBPS::CBPS(formula = Treat ~ X1 + X2 + X3 + X4,
+                        data = data_sim1,
+                        ATT = 0,
+                        twostep = T, standardize = F, method = "over")
+sum(data_sim1$Treat*data_sim1$Y/fit.cbps2$fitted.values)/sum(data_sim1$Treat/fit.cbps2$fitted.values)
+
+fit.ind <- IPS::IPS_ind(d = data_sim1$Treat,
+                        x = cbind(1, data_sim1[, c("X1", "X2", "X3", "X4")]),
+                        beta.initial = fit.cbps2$coefficients, maxit = 25000)
+  
+fit.exp <- IPS::IPS_exp(d = data_sim1$Treat,
+                        x = cbind(1, data_sim1[, c("X1", "X2", "X3", "X4")]),
+                        beta.initial = fit.cbps2$coefficients, maxit = 25000)
+  
+fit.proj <- IPS::IPS_proj(d = data_sim1$Treat,
+                          x = cbind(1, data_sim1[, c("X1", "X2", "X3", "X4")]),
+                          beta.initial = fit.cbps2$coefficients, maxit = 25000)
+
+ate_IPS_ind <- IPS::ATE(data_sim1$Y, 
+                        data_sim1$Treat, 
+                        cbind(1, data_sim1[, c("X1", "X2", "X3", "X4")]), 
+                        fit.ind$fitted.values, 
+                        fit.ind$lin.rep)
+
+sum(data_sim1$Treat*data_sim1$Y/fit.ind$fitted.values)/sum(data_sim1$Treat/fit.ind$fitted.values)
+
+w_1 <- data_sim1$Treat/fit.ind$fitted.values
+w_1 <- w_1/mean(w_1)
+w_0 <- (1-data_sim1$Treat)/(1-fit.ind$fitted.values)
+w_0 <- w_0/mean(w_0)
+
+c(by_hand=mean((w_1-w_0)*data_sim1$Y), est=ate_IPS_ind$ate)
+```
+
+
+```{r}
+data_sim1_treated <- subset(data_sim1, Treat == 1)
+data_sim1_control <- subset(data_sim1, Treat == 0)
+treated_n <- NROW(data_sim1_treated)
+treated_quantiles <- lapply(data_sim1_treated[, 3:6], quantile, probs = seq(0.1, 0.9, 0.1))
+treated_totals <- colSums(data_sim1_treated[, 3:6])
+
+m1 <- joint_calib(formula_totals = ~ X1 + X2 + X3 + X4,
+                  formula_quantiles = ~ X1 + X2 + X3 + X4, 
+                  data = data_sim1_control,
+                  pop_totals = treated_totals,
+                  pop_quantiles = treated_quantiles, 
+                  N = treated_n,
+                  method = "raking")
+
+mean(data_sim1_treated$Y) - weighted.mean(data_sim1_control$Y, m1$g)
+
+```
+
+## mis-specified propensity score
