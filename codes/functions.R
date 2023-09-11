@@ -1,7 +1,7 @@
 ## function taken from the paper Sant'Anna, P. H., Song, X., & Xu, Q. (2022). Covariate distribution balance via propensity scores. Journal of Applied Econometrics, 37(6), 1093-1120.
 ## in particular from here: http://qed.econ.queensu.ca/jae/datasets/santanna001/
 
-dgps_ips <- function(n, dgp, scale.ps = 1){
+cbps_sim_data <- function(n, dgp, scale.ps = 1){
   #----------------------------------------------------------------------------
   #----------------------------------------------------------------------------
   # Kand and Schafer design - Correct model
@@ -86,74 +86,5 @@ dgps_ips <- function(n, dgp, scale.ps = 1){
   #----------------------------------------------------------------------------
   
   return(datamatrix)
-}
-
-
-##  https://stackoverflow.com/questions/58395772/r-data-table-sample-by-group-with-different-sampling-proportion
-group_sampler <- function(data, group_col, sample_sizes) {
-  data[, .SD[sample(.N, sample_sizes[.GRP])], keyby = group_col]
-}
-
-
-## for sim 1
-
-eb_sim <- function(data, type, q_probs=probs_quar) {
-  
-  vars <- paste0("x", 1:6)
-  vars_num <- vars[-6]
-  df_sim <- copy(data[design == type])
-  #df_sim <- group_sampler(data[design == type], "flag", c(control_n, treatment_n))
-  df_sim_t <- df_sim[flag == TRUE] ## treated
-  df_sim_c <- df_sim[flag == FALSE] ## control
-  
-  ## ebal
-  invisible(
-    capture.output(
-      ebal_res <- ebalance(Treatment = df_sim$flag, X = df_sim[, ..vars])
-    )
-  )
-  
-  ## jointcal
-  jcal_res_eb <- joint_calib(formula_quantiles = ~ x1 + x2 + x3 + x4 + x5,
-                             formula_totals = ~ x1 + x2 + x3 + x4 + x5 + x6,
-                             data = df_sim_c,
-                             N = nrow(df_sim_t),
-                             pop_quantiles = lapply(df_sim_t[, ..vars_num], quantile, probs = q_probs),
-                             pop_totals = colSums(df_sim_t[, ..vars]),
-                             method = "eb")
-  
-  jcal_res_raking <- joint_calib(formula_quantiles = ~ x1 + x2 + x3 + x4 + x5,
-                                 formula_totals = ~ x1 + x2 + x3 + x4 + x5 + x6,
-                                 data = df_sim_c,
-                                 N = nrow(df_sim_t),
-                                 pop_quantiles = lapply(df_sim_t[, ..vars_num], quantile, probs = q_probs),
-                                 pop_totals = colSums(df_sim_t[, ..vars]),
-                                 method = "raking")
-  
-  jcal_res_raking_qonly <- joint_calib(formula_quantiles = ~ x1 + x2 + x3 + x4 + x5,
-                                       data = df_sim_c,
-                                       N = nrow(df_sim_t),
-                                       pop_quantiles = lapply(df_sim_t[, ..vars_num], quantile, probs = q_probs),
-                                       method = "raking")
-  
-    df_result <- rbind(
-      data.frame(est="eb", des = type,
-                 df_sim_t[, lapply(.SD, mean), .SDcols = patterns("y")] - 
-                   df_sim_c[, lapply(.SD, weighted.mean, w=ebal_res$w), .SDcols = patterns("y")]),
-      data.frame(est="qrak", des = type,
-                 df_sim_t[, lapply(.SD, mean), .SDcols = patterns("y")] - 
-                   df_sim_c[, lapply(.SD, weighted.mean, w=jcal_res_raking$g), .SDcols = patterns("y")]),
-      data.frame(est="qeb", des = type,
-                 df_sim_t[, lapply(.SD, mean), .SDcols = patterns("y")] - 
-                   df_sim_c[, lapply(.SD, weighted.mean, w=jcal_res_eb$g), .SDcols = patterns("y")]),
-      data.frame(est="qrak_only", des = type,
-                 df_sim_t[, lapply(.SD, mean), .SDcols = patterns("y")] - 
-                   df_sim_c[, lapply(.SD, weighted.mean, w=jcal_res_raking_qonly$g), .SDcols = patterns("y")]),
-      data.frame(est="naive", des = type,
-                 df_sim_t[flag==TRUE, lapply(.SD, mean), .SDcols = patterns("y")] - 
-                   df_sim_c[, lapply(.SD, mean), .SDcols = patterns("y")])
-    )
-  
-  df_result
 }
 

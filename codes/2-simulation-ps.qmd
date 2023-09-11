@@ -9,7 +9,7 @@ Install packages according using the following codes
 
 ```{r installation, eval = FALSE}
 install.packages("remotes")
-remotes::install_github("ncn-foreigners/jointCalib")
+remotes::install_github("ncn-foreigners/jointCalib@causal")
 remotes::install_github("ncn-foreigners/nonprobsvy")
 remotes::install_github("pedrohcgs/IPS")
 ```
@@ -23,6 +23,10 @@ library(nonprobsvy)
 library(jointCalib)
 library(IPS)
 library(CBPS)
+library(ebal)
+library(glue)
+library(cobalt)
+library(spatstat.geom)
 ```
 
 Functions taken from
@@ -38,7 +42,7 @@ source("functions.R")
 
 ```{r}
 set.seed(123)
-data_sim1 <- dgps_ips(n = 500, dgp=1)
+data_sim1 <- dgps_ips(n = 1000, dgp=2)
 head(data_sim1)
 ```
 
@@ -48,14 +52,10 @@ fit.cbps <- CBPS::CBPS(formula = Treat ~ X1 + X2 + X3 + X4,
                        ATT = 0,
                        twostep = T, standardize = F, method = "exact")
 
-
-sum(data_sim1$Treat*data_sim1$Y/fit.cbps$fitted.values)/sum(data_sim1$Treat/fit.cbps$fitted.values)
-
 fit.cbps2 <- CBPS::CBPS(formula = Treat ~ X1 + X2 + X3 + X4,
                         data = data_sim1,
                         ATT = 0,
                         twostep = T, standardize = F, method = "over")
-sum(data_sim1$Treat*data_sim1$Y/fit.cbps2$fitted.values)/sum(data_sim1$Treat/fit.cbps2$fitted.values)
 
 fit.ind <- IPS::IPS_ind(d = data_sim1$Treat,
                         x = cbind(1, data_sim1[, c("X1", "X2", "X3", "X4")]),
@@ -87,22 +87,276 @@ c(by_hand=mean((w_1-w_0)*data_sim1$Y), est=ate_IPS_ind$ate)
 
 
 ```{r}
-data_sim1_treated <- subset(data_sim1, Treat == 1)
-data_sim1_control <- subset(data_sim1, Treat == 0)
-treated_n <- NROW(data_sim1_treated)
-treated_quantiles <- lapply(data_sim1_treated[, 3:6], quantile, probs = seq(0.1, 0.9, 0.1))
-treated_totals <- colSums(data_sim1_treated[, 3:6])
+m1 <- joint_calib_att(formula_means = ~ X1 + X2 + X3 + X4,
+                      formula_quantiles = ~ X1 + X2 + X3 + X4,
+                      treatment = ~ Treat,
+                      data = data_sim1,
+                      method = "raking")
 
-m1 <- joint_calib(formula_totals = ~ X1 + X2 + X3 + X4,
-                  formula_quantiles = ~ X1 + X2 + X3 + X4, 
-                  data = data_sim1_control,
-                  pop_totals = treated_totals,
-                  pop_quantiles = treated_quantiles, 
-                  N = treated_n,
-                  method = "raking")
+mean(data_sim1$Y[data_sim1$Treat == 1]) - weighted.mean(data_sim1$Y[data_sim1$Treat==0], m1$g)
+```
 
-mean(data_sim1_treated$Y) - weighted.mean(data_sim1_control$Y, m1$g)
+
+```{r}
+## for obs
+A_control <- joint_calib_create_matrix(data_sim1_control[, c("X1", "X2", "X3", "X4")], 
+                                       N = NROW(data_sim1_treated), 
+                                       pop_quantiles = lapply(data_sim1_control[, c("X1", "X2", "X3", "X4")], 
+                                                              quantile, probs = seq(0.1, 0.9, 0.1)))
+## for treated
+A_treated <- joint_calib_create_matrix(data_sim1_treated[, c(c("X1", "X2", "X3", "X4"))], 
+                                       N = NROW(data_sim1_treated), 
+                                       pop_quantiles = lapply(data_sim1_treated[, c("X1", "X2", "X3", "X4")], 
+                                                              quantile, probs = seq(0.1, 0.9, 0.1)))
+
+colnames(A_treated) <- colnames(A_control) <- paste(rep(c("X1", "X2", "X3", "X4"), each=9), rep(1:9, times = 4), sep = "_")
+
+data_sim1_cbps <- rbind(cbind(data_sim1_treated, A_treated),
+                        cbind(data_sim1_control, A_control))
+
+res <- CBPS::CBPS(formula = Treat ~ X1 + X2 + X3 + X4,
+                  data = data_sim1_cbps,
+                  ATT = 0,
+                  twostep = T, standardize = F, method = "exact")
+
+res2 <- CBPS::CBPS(formula = Treat ~   
+                     X1_1 + X1_2 + X1_3 + X1_4 + X1_5 + X1_6 + X1_7 + X1_8 + X1_9 +
+                     X2_1 + X2_2 + X2_3 + X2_4 + X2_5 + X2_6 + X2_7 + X2_8 + X2_9 + 
+                     X3_1 + X3_2 + X3_3 + X3_4 + X3_5 + X3_6 + X3_7 + X3_8 + X3_9 + 
+                     X4_1 + X4_2 + X4_3 + X4_4 + X4_5 + X4_6 + X4_7 + X4_8 + X4_9,
+                  data = data_sim1_cbps,
+                  ATT = 0,
+                  twostep = T, standardize = T, method = "exact")
+
+w_1 <- data_sim1_cbps$Treat/res$fitted.values
+w_1 <- w_1/mean(w_1)
+w_0 <- (1-data_sim1_cbps$Treat)/(1-res$fitted.values)
+w_0 <- w_0/mean(w_0)
+
+w_1a <- data_sim1_cbps$Treat/res2$fitted.values
+w_1a <- w_1a/mean(w_1a)
+w_0a <- (1-data_sim1_cbps$Treat)/(1-res2$fitted.values)
+w_0a <- w_0a/mean(w_0a)
+
+c(by_hand=mean((w_1-w_0)*data_sim1_cbps$Y), by_hand2=mean((w_1a-w_0a)*data_sim1_cbps$Y))
 
 ```
+
+Simulation
+
+```{r}
+reps <- 100
+n_sample <- 1000
+wyniki <- matrix(0, nrow = reps, ncol = 4)
+wyniki_ks <- matrix(0, nrow = reps, ncol = 4)
+wyniki_cvm <- matrix(0, nrow = reps, ncol = 4)
+colnames(wyniki_ks) <- colnames(wyniki_cvm) <- colnames(wyniki) <- c("IPS", "CPBS", "CBPS (Q)", "CBPS (P)")
+probs1 <- seq(0.25, 0.75, 0.25)
+probs2 <- seq(0.1, 0.9, 0.1)
+
+for (i in 1:reps) {
+  set.seed(2023 + i)
+  if (i %% 10 == 0) print(i)
+  data_sim1 <- dgps_ips(n = n_sample, dgp=2)
+  data_sim1_treated <- subset(data_sim1, Treat == 1)
+  data_sim1_control <- subset(data_sim1, Treat == 0)
+  
+  data_sim1_ord <- rbind(data_sim1_treated, data_sim1_control)
+
+  xcov <- cbind(1, data_sim1_ord[, c("X1", "X2", "X3", "X4")])
+  
+  fit.cbps <- CBPS::CBPS(formula = Treat ~ X1 + X2 + X3 + X4,
+                         data = data_sim1_ord,
+                         ATT = 0,
+                         twostep = T, standardize = F, method = "exact")
+  
+  fit.exp <- IPS::IPS_exp(d = data_sim1_ord$Treat,
+                          x = xcov,
+                          beta.initial = fit.cbps2$coefficients, maxit = 25000)
+  
+  ate_IPS_ind <- IPS::ATE(data_sim1_ord$Y, 
+                          data_sim1_ord$Treat, 
+                          xcov, 
+                          fit.exp$fitted.values, 
+                          fit.exp$lin.rep)
+  
+  ## calib
+  
+  
+  ## for quantiles
+  ## for obs
+  A_control <- joint_calib_create_matrix(data_sim1_control[, c("X1", "X2", "X3", "X4")], 
+                                         N = NROW(data_sim1_treated), 
+                                         pop_quantiles = lapply(data_sim1_control[, c("X1", "X2", "X3", "X4")], 
+                                                                quantile, probs = probs1))
+  ## for treated
+  A_treated <- joint_calib_create_matrix(data_sim1_treated[, c(c("X1", "X2", "X3", "X4"))], 
+                                         N = NROW(data_sim1_treated), 
+                                         pop_quantiles = lapply(data_sim1_treated[, c("X1", "X2", "X3", "X4")], 
+                                                                quantile, probs = probs1))
+  colnames(A_treated) <- colnames(A_control) <- paste(rep(c("X1", "X2", "X3", "X4"), 
+                                                          each=NROW(probs1)), 
+                                                      rep(1:NROW(probs1), times = 4), sep = "_")
+  
+  data_sim1_cbps <- rbind(cbind(data_sim1_treated, A_treated),
+                          cbind(data_sim1_control, A_control))
+  
+  form <- as.formula(glue("Treat ~ {paste(colnames(A_treated), collapse = '+')}"))
+  
+  res2 <- CBPS::CBPS(formula = form,
+                     data = data_sim1_cbps,
+                     ATT = 0,
+                     twostep = T, standardize = F, method = "exact")
+  
+  
+  ## for other percentiles
+  A_control <- joint_calib_create_matrix(data_sim1_control[, c("X1", "X2", "X3", "X4")], 
+                                         N = NROW(data_sim1_treated), 
+                                         pop_quantiles = lapply(data_sim1_control[, c("X1", "X2", "X3", "X4")], 
+                                                                quantile, probs = probs2))
+  ## for treated
+  A_treated <- joint_calib_create_matrix(data_sim1_treated[, c(c("X1", "X2", "X3", "X4"))], 
+                                         N = NROW(data_sim1_treated), 
+                                         pop_quantiles = lapply(data_sim1_treated[, c("X1", "X2", "X3", "X4")], 
+                                                                quantile, probs = probs2))
+  colnames(A_treated) <- colnames(A_control) <- paste(rep(c("X1", "X2", "X3", "X4"), 
+                                                          each=NROW(probs2)), 
+                                                      rep(1:NROW(probs2), times = 4), sep = "_")
+  
+  data_sim1_cbps <- rbind(cbind(data_sim1_treated, A_treated),
+                          cbind(data_sim1_control, A_control))
+  
+  form <- as.formula(glue("Treat ~ {paste(colnames(A_treated), collapse = '+')}"))
+  
+  res3 <- CBPS::CBPS(formula = form,
+                     data = data_sim1_cbps,
+                     ATT = 0,
+                     twostep = T, standardize = F, method = "exact")
+  
+  ## est
+  
+  w_1 <- data_sim1$Treat/fit.cbps$fitted.values
+  w_1 <- w_1/mean(w_1)
+  w_0 <- (1-data_sim1$Treat)/(1-fit.cbps$fitted.values)
+  w_0 <- w_0/mean(w_0)
+  w_cbps <- w_1-w_0
+  
+  w_1a <- data_sim1_cbps$Treat/res2$fitted.values
+  w_1a <- w_1a/mean(w_1a)
+  w_0a <- (1-data_sim1_cbps$Treat)/(1-res2$fitted.values)
+  w_0a <- w_0a/mean(w_0a)
+  w_cbps_a <- w_1a-w_0a
+  
+  w_1b <- data_sim1_cbps$Treat/res3$fitted.values
+  w_1b <- w_1b/mean(w_1b)
+  w_0b <- (1-data_sim1_cbps$Treat)/(1-res3$fitted.values)
+  w_0b <- w_0b/mean(w_0b)
+  w_cbps_b <- w_1b-w_0b
+  
+  w_exp1 <- treat/fit.exp$fitted.values
+  w_exp0 <- (1-treat)/(1 - fit.exp$fitted.values)
+  w_exp1 <- w_exp1/mean(w_exp1)
+  w_exp0 <- w_exp0/mean(w_exp0)
+  w_exp_ate <- w_exp1 - w_exp0
+  
+  ## distance
+  k_dim <- NCOL(xcov)
+
+  indicators <- base::outer(xcov[,1], xcov[,1], "<=")
+  for ( bb in 2:k_dim){
+    indicators <- indicators *
+      base::outer(xcov[, bb], xcov[, bb], "<=")
+  }
+  
+  cdf_balance_cbps <- abs(base::colMeans(w_cbps * indicators))
+  cdf_balance_cbps_a <- abs(base::colMeans(w_cbps_a * indicators))
+  cdf_balance_cbps_b <- abs(base::colMeans(w_cbps_b * indicators))
+  cdf_balance_exp <- abs(base::colMeans(w_exp_ate * indicators))
+  
+  ks_tests <- sqrt(n_sample) * c(
+    max(cdf_balance_exp), max(cdf_balance_cbps), max(cdf_balance_cbps_a), max(cdf_balance_cbps_b)
+  )
+  
+  cvm_tests <- c(
+    sum(cdf_balance_exp^2), sum(cdf_balance_cbps^2), sum(cdf_balance_cbps_a^2), sum(cdf_balance_cbps_b^2)
+  )
+  
+  wyniki[i, ] <- c(ate_IPS_ind$ate, 
+                   mean((w_1-w_0)*data_sim1$Y), 
+                   mean((w_1a-w_0a)*data_sim1_cbps$Y),
+                   mean((w_1b-w_0b)*data_sim1_cbps$Y))
+  wyniki_cvm[i, ] <- cvm_tests
+  wyniki_ks[i, ] <- ks_tests
+}
+
+```
+
+```{r}
+p <- res2$fitted.value
+apply(data_sim1_cbps[data_sim1_cbps$Treat == 0, c("X1_2", "X2_2", "X3_2", "X4_2")], 2, weighted.mean, 
+      w=1/(1-p[data_sim1_cbps$Treat == 0]))
+apply(data_sim1_cbps[data_sim1_cbps$Treat == 1, c("X1_2", "X2_2", "X3_2", "X4_2")], 2, weighted.mean, 
+      w=1/p[data_sim1_cbps$Treat == 1])
+
+```
+```{r}
+spatstat.geom::ewcdf(x=data_sim1_cbps$X1, weights = 1/p) |> plot()
+spatstat.geom::ewcdf(x=data_sim1_cbps$X1, weights = 1/p) |> plot(add = T, col = "red")
+```
+
+```{r}
+boxplot(wyniki, main = "ATE")
+boxplot(wyniki_cvm, main = "CVM")
+boxplot(wyniki_ks, main = "KS")
+sqrt((colMeans(wyniki, na.rm = T)-10)^2+ apply(wyniki, 2, var, na.rm = T))
+```
+
+```{r}
+bal.tab(res2)
+```
+
+
+
+```{r}
+cbps <- function(tet, x) {
+  xs <- x$xs
+  treat <- x$treat
+  p <- plogis(as.numeric(xs %*% tet))
+  mat <- (treat / p - (1 - treat)/(1-p))*xs
+  return(mat)
+}
+
+cbps2 <- function(tet, x) {
+  xs <- x$xs
+  treat <- x$treat
+  p <- plogis(as.numeric(xs %*% tet))
+  mat <- (treat / p - (1 - treat))*xs
+  return(mat)
+}
+
+
+A <- model.matrix(~X1 + X2 + X3 + X4, data_sim1_cbps)
+
+res <- gmm::gmm(g = cbps2, 
+                x = list(xs = A,
+                         treat = data_sim1_cbps$Treat), 
+                t0 = rep(0, ncol(A)))
+
+p <- plogis(as.numeric(A %*% res$coefficients))
+
+apply(A_treated[, 1:5], 2, sum)
+apply(A_control[, 1:5], 2, function(x) sum(x/p[data_sim1_cbps$Treat == 0]))
+
+apply(data_sim1_control[, c("X1", "X2", "X3", "X4")], 2, weighted.mean, w=1/p[data_sim1_cbps$Treat == 0])
+apply(data_sim1_treated[, c("X1", "X2", "X3", "X4")], 2, mean)
+
+apply(data_sim1_control[, c("X1", "X2", "X3", "X4")], 2, weightedMedian, w=1/(1-p[data_sim1_cbps$Treat == 0]))
+apply(data_sim1_treated[, c("X1", "X2", "X3", "X4")], 2, weightedMedian, w=1/p[data_sim1_cbps$Treat == 1])
+
+```
+
+
+
+
 
 ## mis-specified propensity score
