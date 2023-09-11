@@ -59,40 +59,53 @@ for (b in 1:B) {
   ebal <- ebalance(Treatment = sim_df$W,
                  X = sim_df[, paste0("X", 1:6)])
 
-  res_ra <- tryCatch(joint_calib_att(formula_means = ~ X5 + X6, #X1 + X2 + X3 + X4 + X5 + X6,
+  res_ra <- tryCatch(joint_calib_att(formula_means = ~ X1 + X2 + X3 + X4 + X5 + X6,
                             formula_quantiles = ~ X1 + X2 + X3 + X4,
                             treatment = ~ W,
                             data = sim_df,
                             probs = seq(0.1, 0.9, 0.1),
                             method = "raking"), error = function(e) "err")
   
-  if (class(res_ra) != "jointCalib") next
-  
-  res_eb <- joint_calib_att(formula_means = ~ X5 + X6, #X1 + X2 + X3 + X4 + X5 + X6,
+  res_eb <- tryCatch(joint_calib_att(formula_means = ~ X1 + X2 + X3 + X4 + X5 + X6,
                             formula_quantiles = ~ X1 + X2 + X3 + X4,
                             treatment = ~ W,
                             data = sim_df,
                             probs = seq(0.1, 0.9, 0.1),
-                            method = "eb")
+                            method = "eb"), error = function(e) "err")
   
-  res_el <- joint_calib_att(formula_means = ~ X5 + X6, #X1 + X2 + X3 + X4 + X5 + X6,
+  res_el <- tryCatch(joint_calib_att(formula_means = ~ X1 + X2 + X3 + X4 + X5 + X6,
                             formula_quantiles = ~ X1 + X2 + X3 + X4,
                             treatment = ~ W,
                             data = sim_df,
                             probs = seq(0.1, 0.9, 0.1),
-                            method = "el")
+                            method = "el"), error = function(e) "err")
+  
+  if (class(res_ra) != "jointCalib" | class(res_eb) != "jointCalib" | class(res_el) != "jointCalib") next
+  if (any(is.infinite(res_ra$g))) next
   
   setDT(sim_df)
+  
   sim_df[W == 0, ":="(w_jra = res_ra$g, w_jeb = res_eb$g, w_jel = res_el$g, w_eb = ebal$w)]
   
-  y_treat <- sim_df[W == 1, lapply(.SD, mean), .SDcols = patterns("Y")]
-  y_cont_naive <- sim_df[W == 0, lapply(.SD, mean), .SDcols = patterns("Y")]
-  y_cont_jra <- sim_df[W == 0, lapply(.SD, weighted.mean, w_jra), .SDcols = patterns("Y")]
-  y_cont_jeb <- sim_df[W == 0, lapply(.SD, weighted.mean, w_jeb), .SDcols = patterns("Y")]
-  y_cont_jel <- sim_df[W == 0, lapply(.SD, weighted.mean, w_jel), .SDcols = patterns("Y")]
-  y_cont_eba <- sim_df[W == 0, lapply(.SD, weighted.mean, w_eb), .SDcols = patterns("Y")]
+  # y_treat <- sim_df[W == 1, lapply(.SD, mean), .SDcols = patterns("Y")]
+  # y_cont_naive <- sim_df[W == 0, lapply(.SD, mean), .SDcols = patterns("Y")]
+  # y_cont_jra <- sim_df[W == 0, lapply(.SD, weighted.mean, w_jra), .SDcols = patterns("Y")]
+  # y_cont_jeb <- sim_df[W == 0, lapply(.SD, weighted.mean, w_jeb), .SDcols = patterns("Y")]
+  # y_cont_jel <- sim_df[W == 0, lapply(.SD, weighted.mean, w_jel), .SDcols = patterns("Y")]
+  # y_cont_eba <- sim_df[W == 0, lapply(.SD, weighted.mean, w_eb), .SDcols = patterns("Y")]
   
-  result <- rbind(y_treat - y_cont_naive, y_treat - y_cont_jra, y_treat - y_cont_jeb, y_treat - y_cont_jel, y_treat - y_cont_eba)
+  y_treat <- sim_df[W == 1, lapply(.SD, quantile, p = 0.75), .SDcols = patterns("Y")]
+  y_cont_naive <- sim_df[W == 0, lapply(.SD, quantile, p = 0.75), .SDcols = patterns("Y")]
+  y_cont_jra <- sim_df[W == 0, lapply(.SD, weightedQuantile, w=w_jra, p=0.75), .SDcols = patterns("Y")]
+  y_cont_jeb <- sim_df[W == 0, lapply(.SD, weightedQuantile, w=w_jeb, p=0.75), .SDcols = patterns("Y")]
+  y_cont_jel <- sim_df[W == 0, lapply(.SD, weightedQuantile, w=w_jel, p=0.75), .SDcols = patterns("Y")]
+  y_cont_eba <- sim_df[W == 0, lapply(.SD, weightedQuantile, w=w_eb, p=0.75), .SDcols = patterns("Y")]
+  
+  result <- rbind(y_treat - y_cont_naive, 
+                  y_treat - y_cont_jra, 
+                  y_treat - y_cont_jeb, 
+                  y_treat - y_cont_jel, 
+                  y_treat - y_cont_eba)
   result[, est:=c("naive", "joint (raking)", "joint (ebal)", "joint (emplik)", "ebal")]
   result_list[[b]] <- result
 }
