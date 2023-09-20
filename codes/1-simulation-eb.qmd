@@ -93,29 +93,29 @@ for (b in 1:B) {
     
     y1_res <- df_long_des[, lapply(.SD, 
                           FUN = function(x) weighted.mean(y1[treatment==1], x[treatment==1]) - weighted.mean(y1[treatment==0], x[treatment==0])), 
-                         .SDcols = patterns("w_")][, ":="(var="y1", est="ate", tau=NA)]
+                         .SDcols = patterns("w_")][, ":="(var="y1", est="att", tau=NA)]
     y2_res <- df_long_des[, lapply(.SD, 
                           FUN = function(x) weighted.mean(y2[treatment==1], x[treatment==1]) - weighted.mean(y2[treatment==0], x[treatment==0])), 
-                         .SDcols = patterns("w_")][, ":="(var="y2", est="ate", tau=NA)]
+                         .SDcols = patterns("w_")][, ":="(var="y2", est="att", tau=NA)]
     
     y3_res <- df_long_des[, lapply(.SD, 
                           FUN = function(x) weighted.mean(y3[treatment==1], x[treatment==1]) - weighted.mean(y3[treatment==0], x[treatment==0])), 
-                         .SDcols = patterns("w_")][, ":="(var="y3", est="ate", tau=NA)]
+                         .SDcols = patterns("w_")][, ":="(var="y3", est="att", tau=NA)]
     
     y1_res_q <- df_long_des[, lapply(.SD, 
                           FUN = function(x) weightedQuantile(y1[treatment==1], x[treatment==1], tau) - 
                                             weightedQuantile(y1[treatment==0], x[treatment==0],tau)), 
-                         .SDcols = patterns("w_")][, ":="(var="y1", est="qte", tau=tau)]
+                         .SDcols = patterns("w_")][, ":="(var="y1", est="qtt", tau=tau)]
     
     y2_res_q <- df_long_des[, lapply(.SD, 
                           FUN = function(x) weightedQuantile(y2[treatment==1], x[treatment==1], tau) - 
                                             weightedQuantile(y2[treatment==0], x[treatment==0],tau)), 
-                         .SDcols = patterns("w_")][, ":="(var="y2", est="qte", tau=tau)]
+                         .SDcols = patterns("w_")][, ":="(var="y2", est="qtt", tau=tau)]
     
     y3_res_q <- df_long_des[, lapply(.SD, 
                           FUN = function(x) weightedQuantile(y3[treatment==1], x[treatment==1], tau) - 
                                             weightedQuantile(y3[treatment==0], x[treatment==0],tau)), 
-                         .SDcols = patterns("w_")][, ":="(var="y3", est="qte", tau=tau)]
+                         .SDcols = patterns("w_")][, ":="(var="y3", est="qtt", tau=tau)]
     
     y_results[[des]] <- rbind(y1_res,y2_res,y3_res, y1_res_q, y2_res_q, y3_res_q)
   }
@@ -138,11 +138,3 @@ saveRDS(result_total_df,
 ```
 
 
-```{r}
-result_total_df[est == "qte", 
-                .(rmse = mean(value)), #sqrt(mean(value)^2 + var(value))), 
-                .(design, var, weight, tau)] |> 
-  ggplot(data = _, aes(x = tau, y = rmse, linetype = weight)) +
-  geom_line() + 
-  facet_grid(var~design, scales = "free_y")
-```

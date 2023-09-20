@@ -7,6 +7,29 @@ format: html
 library(data.table)
 library(ggplot2)
 library(xtable)
+library(stringr)
+options(xtable.include.rownames = FALSE)
+```
+
+# DEB
+
+```{r}
+sim1_results <- readRDS("../results/sim1-ebal.rds")
+sim1_results[is.na(tau), est_p := est]
+sim1_results[!is.na(tau), est_p := paste0(est, " (", str_pad(tau,4,"right", "0"), ")")]
+sim1_results[, est_p:=factor(est_p, 
+                             c("att", "qtt (0.10)", "qtt (0.25)", "qtt (0.50)", "qtt (0.75)", "qtt (0.90)"),
+                             c("ATT", "QTT (0.10)", "QTT (0.25)", "QTT (0.50)", "QTT (0.75)", "QTT (0.90)"))]
+sim1_results[, we:=factor(weight, c("w_ebal", "w_mq1", "w_mp1"), c("EB", "DEB MQ", "DEB MD"))]
+
+sim1_results[var == "y3", 
+             .(Bias = mean(value), Var = var(value), RMSE = sqrt(mean(value)^2 + var(value))),
+             .(design, est_p, we)] |> 
+  melt(id.vars = c("design", "est_p", "we")) |> 
+  dcast(variable + we + design ~ est_p, value.var = "value") |> 
+  {\(x) x[order(design, variable, we)]}() |>
+  transform(design = NULL) |> 
+  xtable(digits = 4)
 ```
 
 
