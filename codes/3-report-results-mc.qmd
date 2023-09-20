@@ -1,0 +1,78 @@
+---
+title: "Untitled"
+format: html
+---
+
+```{r}
+library(data.table)
+library(ggplot2)
+library(xtable)
+```
+
+
+# PS
+
+```{r}
+sim1 <- readRDS("../results/sim1-dgp1-1000-proj.rds") 
+sqrt((colMeans(sim1$ATE[, -1]) - 10)^2 + apply(sim1$ATE[, -1], 2, var)) |> barplot()
+```
+
+```{r}
+sim2 <- readRDS("../results/sim1-dgp2-1000-proj.rds")
+sqrt((colMeans(sim2$ATE[, -1]) - 10)^2 + apply(sim2$ATE[, -1], 2, var)) |> barplot()
+```
+
+```{r}
+sim2$ATE |> 
+  melt(id.var = "id") |> 
+  setDT() |> 
+  {\(x) x[, .(bias = mean(value)-10, stdev = sd(value), rmse = sqrt( (mean(value)-10)^2 + var(value))), .(est=variable)]}() |> 
+  transform(quant = "ATE") |> 
+  rbind(sim2$QTE[, .(bias = mean(value)-10, stdev = sd(value), rmse = sqrt( (mean(value)-10)^2 + var(value))), 
+         .(est, quant = factor(quant, 1:5, c("0.10", "0.25", "0.50", "0.75", "0.90")))] ) |> 
+  melt(id.vars = c("est", "quant")) |> 
+  transform(quant = factor(quant, c("ATE", "0.10", "0.25", "0.50", "0.75", "0.90"))) |> 
+  subset(est %in% c("IPS (exp)", "IPS (proj)", "CPBS (e)","CPBS (e MQ)" ,"CBPS (e MP)", "CPBS (e P)")) |> 
+  ggplot(data = _, aes(x = est, y = value)) +
+  geom_col() +
+  facet_grid(variable ~ quant)  +
+  theme(axis.text.x = element_text(vjust = 1, hjust = 1, angle = 45))
+
+```
+
+```{r}
+sim2$ATE |> 
+  melt(id.var = "id") |> 
+  setDT() |> 
+  {\(x) x[, .(bias = mean(value)-10, stdev = sd(value), rmse = sqrt( (mean(value)-10)^2 + var(value))), .(est=variable)]}() |> 
+  transform(quant = "ATE") |> 
+  rbind(sim2$QTE[, .(bias = mean(value)-10, stdev = sd(value), rmse = sqrt( (mean(value)-10)^2 + var(value))), 
+         .(est, quant = factor(quant, 1:5, c("0.10", "0.25", "0.50", "0.75", "0.90")))] ) |> 
+  melt(id.vars = c("est", "quant")) |> 
+  #subset(est %in% c("IPS (exp)", "IPS (proj)", "CPBS (e)","CPBS (e MQ)" ,"CBPS (e MP)", "CPBS (e P)")) |>  
+  subset(quant %in% c("ATE", "0.10", "0.90") & variable %in% c("bias", "rmse")) |> 
+  transform(quant = paste(quant, variable),
+            variable = NULL) |> 
+  transform(quant = factor(quant, c("ATE bias", "ATE rmse", "0.10 bias", "0.10 rmse", "0.90 bias", "0.90 rmse"))) |> 
+  dcast(est ~ quant, value.var = "value") |> 
+  xtable() |> 
+  print.xtable(include.rownames = F)
+```
+
+Statistics regarding distributions
+
+```{r}
+sim2$CVM |> 
+  setDT() |> 
+  melt(id.vars = "id") |> 
+  {\(x) x[, .(cvm_mean=mean(value), cvm_median=median(value)), .(variable)]}() |> 
+  merge(x = _,
+        y = {sim2$KS |> 
+                setDT() |> 
+                melt(id.vars = "id") |> 
+                {\(x) x[, .(ks_mean=mean(value), ks_median=median(value)), .(variable)]}() },
+        by = "variable") |> 
+  xtable() |> 
+  print.xtable(include.rownames = F)
+```
+

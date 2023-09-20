@@ -7,7 +7,7 @@ format: html
 
 ```{r}
 #install.packages("remotes")
-remotes::install_github("ncn-foreigners/jointCalib@causal")
+remotes::install_github("ncn-foreigners/jointCalib@dev")
 ```
 
 # Load packages
@@ -15,11 +15,12 @@ remotes::install_github("ncn-foreigners/jointCalib@causal")
 ```{r}
 library(jointCalib)
 library(ebal)
-library(MASS)
+library(mvnfast)
 library(data.table)
 library(ggplot2)
 library(laeken)
 ```
+
 ```{r}
 source("functions.R")
 ```
@@ -29,188 +30,119 @@ source("functions.R")
 Generate data 
 
 ```{r}
-result_list <- list()
+n <- 2000
+n_sample <- 1000
+mu <- c(0, 0, 0)
+Sigma <- matrix(c(2, 1, -1,
+                  1, 1, -0.5,
+                  -1,-0.5, 1), 
+                nrow=3, 
+                ncol=3)
+
 B <- 500
+tau <- c(0.10, 0.25, 0.5, 0.75, 0.9)
+result_total <- list()
+
 for (b in 1:B) {
   set.seed(b)
-  N <- 4000
-  n_tr <- 900/(1+5)
-  n_co <- 900 - n_tr 
-  beta <- rnorm(6)
-  Sigma <- matrix(rep(0.2, 16), 4, 4)
-  diag(Sigma) <- 1
-  X14 <- mvrnorm(N, mu=c(0,0,0, 0), Sigma = Sigma, empirical = F)
-  colnames(X14) <- paste0("X", 1:4)
-  X5 <- rbinom(N,size=1,prob=.2)
-  X6 <- rbinom(N,size=1,prob=.3)
-  e <- rnorm(N,mean=0,sd=sqrt(8))
-  X <- cbind(X14, X5, X6)
-  eta <- as.numeric(X  %*% beta + e -2)
-  W  <- as.numeric(eta>0)
-  sim_df <- data.frame(W, X)
-  tr_keep <- sample(which(sim_df$W==1),n_tr,replace=F)
-  co_keep <- sample(which(sim_df$W==0),n_co,replace=F)
-  sim_df <- sim_df[c(tr_keep,co_keep),]
-  u  <- rnorm(nrow(sim_df))
-  sim_df$Y1 <- with(sim_df, X1 + X2 + X3 - X4 + X5 + X6 + u)
-  sim_df$Y2 <- with(sim_df, X1 + X1 ^ 2 - X6 * X4 + u)
-  sim_df$Y3 <- with(sim_df, 2 * cos(X1) - sin(pi * X2) + u)
+  if (b %% 50 == 0) print(b)
+  x123 <- rmvn(n=n, mu=mu, sigma=Sigma)
+  x1 <- x123[,1]
+  x2 <- x123[,2]
+  x3 <- x123[,3]
+  x4 <- runif(n,-3,3)
+  x5 <- rchisq(n,1)
+  x6 <- rbinom(n,1,0.5)
+  ep1 <- rnorm(n,0,30)
+  ep2 <- rnorm(n,0,100)
+  ep3 <- rchisq(n, 5)
+  ep3 <- ((ep3 - mean(ep3)) / sd(ep3)) * sqrt(67.6) + 0.5
+  d1 <- as.numeric((x1 + 2*x2 -2*x3 -x4 -0.5*x5 +x6 + ep1) > 0)
+  d2 <- as.numeric((x1 + 2*x2 -2*x3 -x4 -0.5*x5 +x6 + ep2) > 0)
+  d3 <- as.numeric((x1 + 2*x2 -2*x3 -x4 -0.5*x5 +x6 + ep3) > 0)
+  eta <- rnorm(n)
+  y1 <- x1 + x2 + x3 - x4 + x5 + x6 + eta
+  y2 <- x1 + x2 + 0.2*x3*x4 - sqrt(x5) + eta
+  y3 <- (x1 + x2 + x5)^2 + eta
+  df <- data.frame(id =1:n, x1,x2,x3,x4,x5,x6,d1,d2,d3,y1,y2,y3) |> setDT()
+  df_long <- melt(df, id.vars = c(1:7,11:13), value.name = "treatment", variable.name = "design")
+  df_long <- df_long[, .SD[sample(.N, n_sample, replace = T)], by = .(design, treatment)]
+  
+  ## sample by 1000 from reach group
+  y_results <- list()
+  
+  for (des in c("d1", "d2", "d3")) {
+    df_long_des <- df_long[design == des]
+    ebal_res <- ebalance(Treatment = df_long_des$treatment, 
+                         X = model.matrix( ~ -1 + x1 + x2 + x3 + x4 + x5 + x6, df_long_des), 
+                         print.level = -1)
+    mq1_res <- joint_calib_att(formula_means = ~ x1 + x2 + x3 + x4 + x5 + x6,
+                               formula_quantiles = ~ x1 + x2 + x3 + x4 + x5,
+                               treatment = ~ treatment,
+                               data = as.data.frame(df_long_des),
+                               method = "eb")
+    mp1_res <- joint_calib_att(formula_means = ~ x1 + x2 + x3 + x4 + x5 + x6,
+                               formula_quantiles = ~ x1 + x2 + x3 + x4 + x5,
+                               treatment = ~ treatment,
+                               data = as.data.frame(df_long_des),
+                               probs = seq(0.1, 0.9, 0.1),
+                               method = "eb") 
+    
+    df_long_des[treatment == 0, ":="(w_ebal=ebal_res$w, w_mq1=mq1_res$g, w_mp1=mp1_res$g)]
+    df_long_des[treatment == 1, ":="(w_ebal=1,          w_mq1=1,         w_mp1=1)]
+    
+    y1_res <- df_long_des[, lapply(.SD, 
+                          FUN = function(x) weighted.mean(y1[treatment==1], x[treatment==1]) - weighted.mean(y1[treatment==0], x[treatment==0])), 
+                         .SDcols = patterns("w_")][, ":="(var="y1", est="ate", tau=NA)]
+    y2_res <- df_long_des[, lapply(.SD, 
+                          FUN = function(x) weighted.mean(y2[treatment==1], x[treatment==1]) - weighted.mean(y2[treatment==0], x[treatment==0])), 
+                         .SDcols = patterns("w_")][, ":="(var="y2", est="ate", tau=NA)]
+    
+    y3_res <- df_long_des[, lapply(.SD, 
+                          FUN = function(x) weighted.mean(y3[treatment==1], x[treatment==1]) - weighted.mean(y3[treatment==0], x[treatment==0])), 
+                         .SDcols = patterns("w_")][, ":="(var="y3", est="ate", tau=NA)]
+    
+    y1_res_q <- df_long_des[, lapply(.SD, 
+                          FUN = function(x) weightedQuantile(y1[treatment==1], x[treatment==1], tau) - 
+                                            weightedQuantile(y1[treatment==0], x[treatment==0],tau)), 
+                         .SDcols = patterns("w_")][, ":="(var="y1", est="qte", tau=tau)]
+    
+    y2_res_q <- df_long_des[, lapply(.SD, 
+                          FUN = function(x) weightedQuantile(y2[treatment==1], x[treatment==1], tau) - 
+                                            weightedQuantile(y2[treatment==0], x[treatment==0],tau)), 
+                         .SDcols = patterns("w_")][, ":="(var="y2", est="qte", tau=tau)]
+    
+    y3_res_q <- df_long_des[, lapply(.SD, 
+                          FUN = function(x) weightedQuantile(y3[treatment==1], x[treatment==1], tau) - 
+                                            weightedQuantile(y3[treatment==0], x[treatment==0],tau)), 
+                         .SDcols = patterns("w_")][, ":="(var="y3", est="qte", tau=tau)]
+    
+    y_results[[des]] <- rbind(y1_res,y2_res,y3_res, y1_res_q, y2_res_q, y3_res_q)
+  }
 
-  ebal <- ebalance(Treatment = sim_df$W,
-                 X = sim_df[, paste0("X", 1:6)])
-
-  res_ra <- tryCatch(joint_calib_att(formula_means = ~ X1 + X2 + X3 + X4 + X5 + X6,
-                            formula_quantiles = ~ X1 + X2 + X3 + X4,
-                            treatment = ~ W,
-                            data = sim_df,
-                            probs = seq(0.1, 0.9, 0.1),
-                            method = "raking"), error = function(e) "err")
+  result_total[[b]] <- rbindlist(y_results, idcol = "design")
   
-  res_eb <- tryCatch(joint_calib_att(formula_means = ~ X1 + X2 + X3 + X4 + X5 + X6,
-                            formula_quantiles = ~ X1 + X2 + X3 + X4,
-                            treatment = ~ W,
-                            data = sim_df,
-                            probs = seq(0.1, 0.9, 0.1),
-                            method = "eb"), error = function(e) "err")
   
-  res_el <- tryCatch(joint_calib_att(formula_means = ~ X1 + X2 + X3 + X4 + X5 + X6,
-                            formula_quantiles = ~ X1 + X2 + X3 + X4,
-                            treatment = ~ W,
-                            data = sim_df,
-                            probs = seq(0.1, 0.9, 0.1),
-                            method = "el"), error = function(e) "err")
-  
-  if (class(res_ra) != "jointCalib" | class(res_eb) != "jointCalib" | class(res_el) != "jointCalib") next
-  if (any(is.infinite(res_ra$g))) next
-  
-  setDT(sim_df)
-  
-  sim_df[W == 0, ":="(w_jra = res_ra$g, w_jeb = res_eb$g, w_jel = res_el$g, w_eb = ebal$w)]
-  
-  # y_treat <- sim_df[W == 1, lapply(.SD, mean), .SDcols = patterns("Y")]
-  # y_cont_naive <- sim_df[W == 0, lapply(.SD, mean), .SDcols = patterns("Y")]
-  # y_cont_jra <- sim_df[W == 0, lapply(.SD, weighted.mean, w_jra), .SDcols = patterns("Y")]
-  # y_cont_jeb <- sim_df[W == 0, lapply(.SD, weighted.mean, w_jeb), .SDcols = patterns("Y")]
-  # y_cont_jel <- sim_df[W == 0, lapply(.SD, weighted.mean, w_jel), .SDcols = patterns("Y")]
-  # y_cont_eba <- sim_df[W == 0, lapply(.SD, weighted.mean, w_eb), .SDcols = patterns("Y")]
-  
-  y_treat <- sim_df[W == 1, lapply(.SD, quantile, p = 0.75), .SDcols = patterns("Y")]
-  y_cont_naive <- sim_df[W == 0, lapply(.SD, quantile, p = 0.75), .SDcols = patterns("Y")]
-  y_cont_jra <- sim_df[W == 0, lapply(.SD, weightedQuantile, w=w_jra, p=0.75), .SDcols = patterns("Y")]
-  y_cont_jeb <- sim_df[W == 0, lapply(.SD, weightedQuantile, w=w_jeb, p=0.75), .SDcols = patterns("Y")]
-  y_cont_jel <- sim_df[W == 0, lapply(.SD, weightedQuantile, w=w_jel, p=0.75), .SDcols = patterns("Y")]
-  y_cont_eba <- sim_df[W == 0, lapply(.SD, weightedQuantile, w=w_eb, p=0.75), .SDcols = patterns("Y")]
-  
-  result <- rbind(y_treat - y_cont_naive, 
-                  y_treat - y_cont_jra, 
-                  y_treat - y_cont_jeb, 
-                  y_treat - y_cont_jel, 
-                  y_treat - y_cont_eba)
-  result[, est:=c("naive", "joint (raking)", "joint (ebal)", "joint (emplik)", "ebal")]
-  result_list[[b]] <- result
 }
 
-result_list_df <- rbindlist(result_list, idcol = "b")
-
-ggplot(data = result_list_df, aes(x = est, y = Y2)) + 
-  geom_boxplot()
-
-result_list_df[!is.na(Y1), .(bias=mean(Y1), rmse = sqrt(mean(Y1)^2 + var(Y1))), est]
-result_list_df[!is.na(Y2), .(bias=mean(Y2), rmse = sqrt(mean(Y2)^2 + var(Y2))), est]
-result_list_df[!is.na(Y1), .(bias=mean(Y3), rmse = sqrt(mean(Y3)^2 + var(Y3))), est]
 ```
 
 ```{r}
-res_patt <- list() 
-for (b in 1:1000) {
-  set.seed(b)
-  #data_sim[, flag:=rbinom(nrow(data_sim), 1, prob = pnorm(lin))]
-  data_sim[, flag:= lin > rnorm(N)]
-  res_patt[[b]] <- eb_sim(data = data_sim, type = 1, q_probs = probs_quar)
-}
-
-res_patt_df <- rbindlist(res_patt, id = "iter")
-res_patt_df[,est:=factor(est, c("naive", "eb", "qrak", "qeb", "qrak_only"))]
-melt(res_patt_df, id.vars = c("iter", "est", "des"), value.var = "bias", variable.name = "y") |> 
-  ggplot(data = _, aes(x = est, y = value)) +
-  geom_jitter(alpha = 0.1) + 
-  geom_violin(scale = "width", draw_quantiles = c(0.25,0.5,0.75)) +
-  stat_summary(fun = mean, geom = "point", col = "red") + 
-  facet_wrap(~y) +
-  geom_hline(yintercept = 0, linetype= "dashed", color = "red")
+result_total_df <- rbindlist(result_total, idcol = "b") |> 
+  melt(id.vars = c("b", "design", "var", "est", "tau"), variable.name = "weight", value.name = "value")
 ```
 
 ```{r}
-res_patt_df[, lapply(.SD, mean), est, .SDcols = patterns("y")]
-res_patt_df[, lapply(.SD, function(x) sqrt(mean(x)^2 + var(x))), est, .SDcols = patterns("y")]
+saveRDS(result_total_df, 
+        file = "../results/sim1-ebal.rds")
 ```
 
-## Simulation based on hbal
 
 ```{r}
-set.seed(1984)
-N <- 1500
-X1 <- rnorm(N)
-X2 <- rnorm(N)
-X3 <- rbinom(N, size = 1, prob = .5)
-X1X3 <- X1*X3
-D_star <- 0.5 * X1 + 0.3 * X2 + 0.2 * X1 * X2 - 0.5 * X1 * X3 - 1
-D <- ifelse(D_star > rnorm(N), 1, 0) # Treatment indicator
-y <- 0.5 * D + X1 + X2 + X2 * X3 + rnorm(N) # Outcome
-dat <- data.frame(D = D, X1 = X1, X2 = X2, X3 = X3, X1X3=X1X3, Y = y)
-head(dat)
-ebal.out <- ebalance(Treat = dat$D, X = dat[,c('X1', 'X2', 'X3', "X1X3")]) 
-dat_t <- subset(dat, D == 1)
-dat_c <- subset(dat, D == 0)
-
-
-jcal <- joint_calib(formula_totals = ~ X1 + X2 + X3 + X1X3,
-                    formula_quantiles = ~ X1 + X2 + X1X3,
-                    data = dat_c,
-                    N = nrow(dat_t),
-                    pop_totals = colSums(dat_t[, c("X1", "X2", "X3", "X1X3")]),
-                    pop_quantiles = lapply(dat_t[, c("X1", "X2", "X1X3")], quantile, prob = probs_quar),
-                    method = "raking",
-                    backen = "sampling")
-
-dat$w_ebal <- ifelse(dat$D == 0, ebal.out$w, 1)
-dat$w_jcal <- ifelse(dat$D == 0, jcal$g, 1)
-
-with(dat, mean(y[D==1]) - weighted.mean(y[D==0], w = ebal.out$w)) 
-with(dat, mean(y[D==1]) - weighted.mean(y[D==0], w = jcal$g)) 
-with(dat, quantile(y[D==1], 0.90) - weightedQuantile(y[D==0], w = ebal.out$w,probs=0.90))
-with(dat, quantile(y[D==1], 0.90) - weightedQuantile(y[D==0], w = jcal$g,probs=0.90))
-
-plot(ebal.out$w, jcal$g)
-sd(jcal$g)
-sd(ebal.out$w)
-
-apply(dat[D==1, c("X1", "X2")], 2, mean)
-apply(dat[D==0, c("X1", "X2")], 2, weighted.mean, w=ebal.out$w)
-apply(dat[D==0, c("X1", "X2")], 2, weighted.mean, w=jcal$g)
-
-
-p1 <- apply(dat[D==1, c("X1", "X2")], 2, quantile, probs_perc)
-p2 <- apply(dat[D==0, c("X1", "X2")], 2, weightedQuantile, w=ebal.out$w, probs =probs_perc)
-p3 <- apply(dat[D==0, c("X1", "X2")], 2, weightedQuantile, w=jcal$g, probs =probs_perc)
-
-
-dd <- rbind(
-  data.frame(p1, flag = "true", id = 1:9),
-  data.frame(p2, flag = "ebal", id = 1:9),
-  data.frame(p3, flag = "jcal", id = 1:9)
-)
-  
-ggplot(data = dd, aes(x = id, y = X2, color = flag)) +
-  geom_point() +
-  geom_line()
-
-
-``` 
-
-```{r}
-m1 <- lm(y ~ D + X1 + X2 + X3, dat, weights = dat$w_ebal)
-m2 <- lm(y ~ D + X1 + X2 + X3, dat, weights = dat$w_jcal)
-data.frame(coef(m1), coef(m2))
+result_total_df[est == "qte", 
+                .(rmse = mean(value)), #sqrt(mean(value)^2 + var(value))), 
+                .(design, var, weight, tau)] |> 
+  ggplot(data = _, aes(x = tau, y = rmse, linetype = weight)) +
+  geom_line() + 
+  facet_grid(var~design, scales = "free_y")
 ```
-

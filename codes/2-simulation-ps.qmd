@@ -9,7 +9,7 @@ Install packages according using the following codes
 
 ```{r installation, eval = FALSE}
 install.packages("remotes")
-remotes::install_github("ncn-foreigners/jointCalib@causal")
+remotes::install_github("ncn-foreigners/jointCalib@dev")
 remotes::install_github("ncn-foreigners/nonprobsvy")
 remotes::install_github("pedrohcgs/IPS")
 ```
@@ -18,6 +18,7 @@ remotes::install_github("pedrohcgs/IPS")
 # Load required packages
 
 Load required packages and functions 
+
 ```{r}
 library(nonprobsvy)
 library(jointCalib)
@@ -394,7 +395,7 @@ bw <- "nrd0"
 for (i in 1:reps) {
   set.seed(2023 + i)
   if (i %% 10 == 0) print(i)
-  data_sim1 <- cbps_sim_data(n = n_sample, dgp=2)
+  data_sim1 <- cbps_sim_data(n = n_sample, dgp=2, y_nonlin = TRUE)
   xcov <- cbind(1, data_sim1[, c("X1", "X2", "X3", "X4")])
   
   ## cbps - exact
@@ -443,8 +444,8 @@ for (i in 1:reps) {
   suppressWarnings(qte_IPS_exp <- IPS::QTE(data_sim1$Y, data_sim1$Treat, xcov, fit.exp$fitted.values,
                           fit.exp$lin.rep, tau, bw = bw))
   
-  ## proj 
-  fit.proj <- IPS::IPS_proj(d = data_sim1$Treat,
+  ## proj ### THIS SHOULD BE CHANGED TO IPS_PROJ!!!!!! this is only for experimental result
+  fit.proj <- IPS::IPS_ind(d = data_sim1$Treat,
                           x = xcov,
                           beta.initial = fit.cbps$coefficients, maxit = 25000)
   
@@ -504,11 +505,11 @@ for (i in 1:reps) {
   ## for other percentiles - over
 
   res3_o <- joint_calib_cbps(formula_quantiles =  ~ X1 + X2 + X3 + X4,
-                           formula_means = ~ X1 + X2 + X3 + X4,
-                           treatment = ~ Treat, 
-                           data = data_sim1,
-                           probs = probs2,
-                           standardize = F, method = "over")
+                             formula_means = ~ X1 + X2 + X3 + X4,
+                             treatment = ~ Treat,
+                             data = data_sim1,
+                             probs = probs2,
+                             standardize = F, method = "over")
   cbps.lin.rep_o <- inflc_cbps(data_sim1$Treat, xcov,
                              res3_o$fitted.values, method = "over")
   ate_cbps3_o <- IPS::ATE(data_sim1$Y, data_sim1$Treat, xcov, 
@@ -735,14 +736,8 @@ apply(A_control[, 1:5], 2, function(x) sum(x/p[data_sim1_cbps$Treat == 0]))
 
 apply(data_sim1_control[, c("X1", "X2", "X3", "X4")], 2, weighted.mean, w=1/p[data_sim1_cbps$Treat == 0])
 apply(data_sim1_treated[, c("X1", "X2", "X3", "X4")], 2, mean)
-
 apply(data_sim1_control[, c("X1", "X2", "X3", "X4")], 2, weightedMedian, w=1/(1-p[data_sim1_cbps$Treat == 0]))
 apply(data_sim1_treated[, c("X1", "X2", "X3", "X4")], 2, weightedMedian, w=1/p[data_sim1_cbps$Treat == 1])
 
 ```
 
-
-
-
-
-## mis-specified propensity score

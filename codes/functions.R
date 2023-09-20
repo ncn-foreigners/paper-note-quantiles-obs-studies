@@ -1,7 +1,7 @@
 ## function taken from the paper Sant'Anna, P. H., Song, X., & Xu, Q. (2022). Covariate distribution balance via propensity scores. Journal of Applied Econometrics, 37(6), 1093-1120.
 ## in particular from here: http://qed.econ.queensu.ca/jae/datasets/santanna001/
 
-cbps_sim_data <- function(n, dgp, scale.ps = 1){
+cbps_sim_data <- function(n, dgp, scale.ps = 1, y_nonlin = FALSE){
   #----------------------------------------------------------------------------
   #----------------------------------------------------------------------------
   # Kand and Schafer design - Correct model
@@ -26,6 +26,8 @@ cbps_sim_data <- function(n, dgp, scale.ps = 1){
     # Beta of regression
     b.reg <- c(27.4, 13.7, 13.7, 13.7)
     b.reg.Times.x <- X %*% b.reg
+    if (y_nonlin) b.reg.Times.x <- (2*X[, 1] + 2*X[, 2] + X[, 3])^2
+    
     Y0 <- 200 - b.reg.Times.x + stats::rnorm(n)
     Y1 <- 210 + b.reg.Times.x + stats::rnorm(n)
     # Observed outcome
