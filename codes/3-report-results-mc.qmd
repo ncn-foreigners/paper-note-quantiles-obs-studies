@@ -112,7 +112,13 @@ sim1_results |>
   ggplot(data = _, aes(x = est_p, y = value, color = we)) +
   geom_hline(yintercept = 0, linetype = "dashed") + 
   geom_boxplot() +
-  facet_grid(var ~ design, scale = "free_y") +
+  facet_grid(var ~ design, scale = "free_y",
+             labeller = labeller(var = c("y1"="Y1 (linear)", 
+                                         "y2"="Y2 (weak non-lin)",
+                                         "y3"="Y3 (stron non-lin)"),
+                                 design = c("d1"="D1 (strong sep, norm)",
+                                            "d2"="D2 (weak sep, norm)",
+                                            "d3"="D3 (medium sep, lep)"))) +
   scale_color_brewer(type = "qual", palette = "Set1") +
   labs(x = "Causal parameter", y = "Value", color = "Method") +
   theme(axis.text.x = element_text(angle = 45, vjust=1,hjust=1)) -> p1
