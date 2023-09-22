@@ -26,10 +26,7 @@ library(IPS)
 library(CBPS)
 library(ebal)
 library(glue)
-library(cobalt)
-library(spatstat.geom)
 library(data.table)
-library(ggplot2)
 ```
 
 Functions taken from
@@ -43,12 +40,12 @@ Simulation gen 1
 ```{r}
 reps <- 500
 n_sample <- 1000
-est <- 10
-wyniki <- matrix(0, nrow = reps, ncol = est)
-wyniki_qte <- matrix(0, nrow = reps, ncol = est*5)
-wyniki_ks <- matrix(0, nrow = reps, ncol = est)
-wyniki_cvm <- matrix(0, nrow = reps, ncol = est)
-colnames(wyniki_ks) <- colnames(wyniki_cvm) <- colnames(wyniki) <- c("IPS (exp)", "IPS (proj)", 
+est <- 11
+results <- matrix(0, nrow = reps, ncol = est)
+results_qte <- matrix(0, nrow = reps, ncol = est*5)
+results_ks <- matrix(0, nrow = reps, ncol = est)
+results_cvm <- matrix(0, nrow = reps, ncol = est)
+colnames(results_ks) <- colnames(results_ks) <- colnames(results) <- c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
                                                                      "CPBS (e)", "CBPS (o)",
                                                                      "CBPS (e MQ)", "CBPS (o MQ)", 
                                                                      "CBPS (e MP)",  "CBPS (o MP)",
@@ -60,7 +57,7 @@ bw <- "nrd0"
 
 for (i in 1:reps) {
   set.seed(2023 + i)
-  if (i %% 10 == 0) print(i)
+  if (i %% 5 == 0) print(i)
   data_sim1 <- cbps_sim_data(n = n_sample, dgp=1)
   xcov <- cbind(1, data_sim1[, c("X1", "X2", "X3", "X4")])
   
@@ -94,13 +91,29 @@ for (i in 1:reps) {
   suppressWarnings(qte_cbps_o <- IPS::QTE(data_sim1$Y, data_sim1$Treat, xcov,
                                           fit.cbps_o$fitted.values,
                                           cbps.lin.rep_o, tau, bw = bw))
+  ## ind
+   fit.ind <- IPS::IPS_ind(d = data_sim1$Treat,
+                          x = xcov,
+                          beta.initial = fit.cbps$coefficients, maxit = 25000)
+  
+  ate_IPS_ind <- IPS::ATE(data_sim1$Y, 
+                          data_sim1$Treat, 
+                          xcov, 
+                          fit.ind$fitted.values, 
+                          fit.ind$lin.rep)
+  
+  
+  suppressWarnings(qte_IPS_ind <- IPS::QTE(data_sim1$Y, 
+                                           data_sim1$Treat, xcov, 
+                                           fit.ind$fitted.values,
+                                           fit.ind$lin.rep, tau, bw = bw))
   
   ## exp 
   fit.exp <- IPS::IPS_exp(d = data_sim1$Treat,
                           x = xcov,
                           beta.initial = fit.cbps$coefficients, maxit = 25000)
   
-  ate_IPS_ind <- IPS::ATE(data_sim1$Y, 
+  ate_IPS_exp <- IPS::ATE(data_sim1$Y, 
                           data_sim1$Treat, 
                           xcov, 
                           fit.exp$fitted.values, 
@@ -147,7 +160,7 @@ for (i in 1:reps) {
   cbps.lin.rep_o <- inflc_cbps(data_sim1$Treat, xcov,
                              res2_o$fitted.values, method = "over")
   ate_cbps2_o <- IPS::ATE(data_sim1$Y, data_sim1$Treat, xcov, 
-                       res2$fitted.values, cbps.lin.rep)
+                       res2$fitted.values, cbps.lin.rep_o)
   suppressWarnings(qte_cbps2_o <- IPS::QTE(data_sim1$Y, data_sim1$Treat, xcov,
                        res2_o$fitted.values,
                        cbps.lin.rep_o, tau, bw = bw))
@@ -263,6 +276,12 @@ for (i in 1:reps) {
   w_0c_o <- w_0c_o/mean(w_0c_o)
   w_cbps_c_o <- w_1c_o-w_0c_o
   
+  w_ind1 <- data_sim1$Treat/fit.ind$fitted.values
+  w_ind0 <- (1-data_sim1$Treat)/(1 - fit.ind$fitted.values)
+  w_ind1 <- w_ind1/mean(w_ind1)
+  w_ind0 <- w_ind0/mean(w_ind0)
+  w_ind_ate <- w_ind1 - w_ind0
+  
   w_exp1 <- data_sim1$Treat/fit.exp$fitted.values
   w_exp0 <- (1-data_sim1$Treat)/(1 - fit.exp$fitted.values)
   w_exp1 <- w_exp1/mean(w_exp1)
@@ -293,11 +312,12 @@ for (i in 1:reps) {
   cdf_balance_cbps_b_o <- abs(base::colMeans(w_cbps_b_o * indicators))
   cdf_balance_cbps_c <- abs(base::colMeans(w_cbps_c * indicators))
   cdf_balance_cbps_c_o <- abs(base::colMeans(w_cbps_c_o * indicators))
+  cdf_balance_ind <- abs(base::colMeans(w_ind_ate * indicators))
   cdf_balance_exp <- abs(base::colMeans(w_exp_ate * indicators))
   cdf_balance_proj <- abs(base::colMeans(w_proj_ate * indicators))
   
   ks_tests <- sqrt(n_sample) * c(
-    max(cdf_balance_exp), max(cdf_balance_proj), 
+    max(cdf_balance_ind), max(cdf_balance_exp), max(cdf_balance_proj), 
     max(cdf_balance_cbps), max(cdf_balance_cbps_o), 
     max(cdf_balance_cbps_a), max(cdf_balance_cbps_a_o), 
     max(cdf_balance_cbps_b), max(cdf_balance_cbps_b_o), 
@@ -305,97 +325,52 @@ for (i in 1:reps) {
   )
   
   cvm_tests <- c(
-    sum(cdf_balance_exp^2), sum(cdf_balance_proj^2), 
+    sum(cdf_balance_ind^2), sum(cdf_balance_exp^2), sum(cdf_balance_proj^2), 
     sum(cdf_balance_cbps^2), sum(cdf_balance_cbps_o^2), 
     sum(cdf_balance_cbps_a^2), sum(cdf_balance_cbps_a_o^2), 
     sum(cdf_balance_cbps_b^2), sum(cdf_balance_cbps_b_o^2), 
     sum(cdf_balance_cbps_c^2), sum(cdf_balance_cbps_c_o^2)
   )
   
-  wyniki[i, ] <- c(ate_IPS_ind$ate, 
-                   ate_IPS_proj$ate,
+  results[i, ] <- c(ate_IPS_ind$ate,
+                    ate_IPS_exp$ate,
+                    ate_IPS_proj$ate,
                    ate_cbps$ate, ate_cbps_o$ate, 
                    ate_cbps2$ate, ate_cbps2_o$ate,
                    ate_cbps3$ate, ate_cbps3_o$ate,
                    ate_cbps4$ate, ate_cbps4_o$ate)
-  wyniki_qte[i, ] <- c(qte_IPS_exp$qte,
+  results_qte[i, ] <- c(qte_IPS_ind$qte,
+                       qte_IPS_exp$qte,
                        qte_IPS_proj$qte,
                        qte_cbps$qte, qte_cbps_o$qte,
                        qte_cbps2$qte, qte_cbps2_o$qte,
                        qte_cbps3$qte, qte_cbps3_o$qte,
                        qte_cbps4$qte, qte_cbps4_o$qte)
   
-  wyniki_cvm[i, ] <- cvm_tests
-  wyniki_ks[i, ] <- ks_tests
+  results_cvm[i, ] <- cvm_tests
+  results_ks[i, ] <- ks_tests
 }
-```
-```{r}
-boxplot(wyniki, main = "ATE")
-boxplot(wyniki_cvm, main = "CVM")
-boxplot(wyniki_ks, main = "KS")
-sqrt((colMeans(wyniki, na.rm = T)-10)^2+ apply(wyniki, 2, var, na.rm = T))
-colMeans(wyniki_cvm)
-colMeans(wyniki_ks)
+
 ```
 
-
-
-```{r}
-boxplot(wyniki_qte[, seq(5, 20, 5)])
-
-wyniki_qte_df <- wyniki_qte |> as.data.frame()
-names(wyniki_qte_df) <- paste0(rep(colnames(wyniki), 
-                                  each = 5), "_", 1:5)
-
-setDT(wyniki_qte_df)
-wyniki_qte_df[, id:=1:reps]
-wyniki_qte_df <- melt(wyniki_qte_df, id.vars = "id")
-wyniki_qte_df[, c("est", "quant") := tstrsplit(variable, "_")]
-wyniki_qte_df[, est:=factor(est, colnames(wyniki))]
-# bias = mean(value) - 10, var = var(value), 
-wyniki_qte_df[, .(rmse = sqrt((mean(value) - 10)^2 + var(value))), .(est, quant)] |> 
-  dcast(quant ~ est, value.var = "rmse")
-
-wyniki_qte_df[, .(rmse = sqrt((mean(value) - 10)^2 + var(value))), .(est, quant)] |> 
-  ggplot(data = _, aes(x = est, y = rmse)) +
-  geom_col() +
-  facet_wrap(~quant, ncol = 5)
-
-  dcast(quant ~ est, value.var = "bias")
-```
-
-```{r}
-saveRDS(list(ATE = cbind(id=1:500,as.data.frame(wyniki)),
-             QTE = wyniki_qte_df,
-             CVM = cbind(id=1:500,as.data.frame(wyniki_cvm)),
-             KS = cbind(id=1:500,as.data.frame(wyniki_ks))),
-        file = "../results/sim1-dgp1-1000-proj.rds")
-```
 
 Gen 2
 
 ```{r}
-reps <- 500
-n_sample <- 1000
-est <- 10
-wyniki <- matrix(0, nrow = reps, ncol = est)
-wyniki_qte <- matrix(0, nrow = reps, ncol = est*5)
-wyniki_ks <- matrix(0, nrow = reps, ncol = est)
-wyniki_cvm <- matrix(0, nrow = reps, ncol = est)
-colnames(wyniki_ks) <- colnames(wyniki_cvm) <- colnames(wyniki) <- c("IPS (exp)", "IPS (proj)", 
+results2 <- matrix(0, nrow = reps, ncol = est)
+results2_qte <- matrix(0, nrow = reps, ncol = est*5)
+results2_ks <- matrix(0, nrow = reps, ncol = est)
+results2_cvm <- matrix(0, nrow = reps, ncol = est)
+colnames(results2_ks) <- colnames(results2_ks) <- colnames(results2) <- c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
                                                                      "CPBS (e)", "CBPS (o)",
                                                                      "CBPS (e MQ)", "CBPS (o MQ)", 
                                                                      "CBPS (e MP)",  "CBPS (o MP)",
                                                                      "CPBS (e P)", "CPBS (o P)")
-probs1 <- seq(0.25, 0.75, 0.25)
-probs2 <- seq(0.1, 0.9, 0.1)
-tau <- c(0.10, 0.25, 0.5, 0.75, 0.9)
-bw <- "nrd0" 
 
 for (i in 1:reps) {
   set.seed(2023 + i)
-  if (i %% 10 == 0) print(i)
-  data_sim1 <- cbps_sim_data(n = n_sample, dgp=2, y_nonlin = TRUE)
+  if (i %% 5 == 0) print(i)
+  data_sim1 <- cbps_sim_data(n = n_sample, dgp=2)
   xcov <- cbind(1, data_sim1[, c("X1", "X2", "X3", "X4")])
   
   ## cbps - exact
@@ -428,13 +403,29 @@ for (i in 1:reps) {
   suppressWarnings(qte_cbps_o <- IPS::QTE(data_sim1$Y, data_sim1$Treat, xcov,
                                           fit.cbps_o$fitted.values,
                                           cbps.lin.rep_o, tau, bw = bw))
+  ## ind
+   fit.ind <- IPS::IPS_ind(d = data_sim1$Treat,
+                          x = xcov,
+                          beta.initial = fit.cbps$coefficients, maxit = 25000)
+  
+  ate_IPS_ind <- IPS::ATE(data_sim1$Y, 
+                          data_sim1$Treat, 
+                          xcov, 
+                          fit.ind$fitted.values, 
+                          fit.ind$lin.rep)
+  
+  
+  suppressWarnings(qte_IPS_exp <- IPS::QTE(data_sim1$Y, 
+                                           data_sim1$Treat, xcov, 
+                                           fit.ind$fitted.values,
+                                           fit.ind$lin.rep, tau, bw = bw))
   
   ## exp 
   fit.exp <- IPS::IPS_exp(d = data_sim1$Treat,
                           x = xcov,
                           beta.initial = fit.cbps$coefficients, maxit = 25000)
   
-  ate_IPS_ind <- IPS::ATE(data_sim1$Y, 
+  ate_IPS_exp <- IPS::ATE(data_sim1$Y, 
                           data_sim1$Treat, 
                           xcov, 
                           fit.exp$fitted.values, 
@@ -444,8 +435,8 @@ for (i in 1:reps) {
   suppressWarnings(qte_IPS_exp <- IPS::QTE(data_sim1$Y, data_sim1$Treat, xcov, fit.exp$fitted.values,
                           fit.exp$lin.rep, tau, bw = bw))
   
-  ## proj ### THIS SHOULD BE CHANGED TO IPS_PROJ!!!!!! this is only for experimental result
-  fit.proj <- IPS::IPS_ind(d = data_sim1$Treat,
+  ## proj 
+  fit.proj <- IPS::IPS_proj(d = data_sim1$Treat,
                           x = xcov,
                           beta.initial = fit.cbps$coefficients, maxit = 25000)
   
@@ -481,7 +472,7 @@ for (i in 1:reps) {
   cbps.lin.rep_o <- inflc_cbps(data_sim1$Treat, xcov,
                              res2_o$fitted.values, method = "over")
   ate_cbps2_o <- IPS::ATE(data_sim1$Y, data_sim1$Treat, xcov, 
-                       res2$fitted.values, cbps.lin.rep)
+                       res2$fitted.values, cbps.lin.rep_o)
   suppressWarnings(qte_cbps2_o <- IPS::QTE(data_sim1$Y, data_sim1$Treat, xcov,
                        res2_o$fitted.values,
                        cbps.lin.rep_o, tau, bw = bw))
@@ -505,11 +496,11 @@ for (i in 1:reps) {
   ## for other percentiles - over
 
   res3_o <- joint_calib_cbps(formula_quantiles =  ~ X1 + X2 + X3 + X4,
-                             formula_means = ~ X1 + X2 + X3 + X4,
-                             treatment = ~ Treat,
-                             data = data_sim1,
-                             probs = probs2,
-                             standardize = F, method = "over")
+                           formula_means = ~ X1 + X2 + X3 + X4,
+                           treatment = ~ Treat, 
+                           data = data_sim1,
+                           probs = probs2,
+                           standardize = F, method = "over")
   cbps.lin.rep_o <- inflc_cbps(data_sim1$Treat, xcov,
                              res3_o$fitted.values, method = "over")
   ate_cbps3_o <- IPS::ATE(data_sim1$Y, data_sim1$Treat, xcov, 
@@ -597,6 +588,12 @@ for (i in 1:reps) {
   w_0c_o <- w_0c_o/mean(w_0c_o)
   w_cbps_c_o <- w_1c_o-w_0c_o
   
+  w_ind1 <- data_sim1$Treat/fit.ind$fitted.values
+  w_ind0 <- (1-data_sim1$Treat)/(1 - fit.ind$fitted.values)
+  w_ind1 <- w_ind1/mean(w_ind1)
+  w_ind0 <- w_ind0/mean(w_ind0)
+  w_ind_ate <- w_ind1 - w_ind0
+  
   w_exp1 <- data_sim1$Treat/fit.exp$fitted.values
   w_exp0 <- (1-data_sim1$Treat)/(1 - fit.exp$fitted.values)
   w_exp1 <- w_exp1/mean(w_exp1)
@@ -627,11 +624,12 @@ for (i in 1:reps) {
   cdf_balance_cbps_b_o <- abs(base::colMeans(w_cbps_b_o * indicators))
   cdf_balance_cbps_c <- abs(base::colMeans(w_cbps_c * indicators))
   cdf_balance_cbps_c_o <- abs(base::colMeans(w_cbps_c_o * indicators))
+  cdf_balance_ind <- abs(base::colMeans(w_ind_ate * indicators))
   cdf_balance_exp <- abs(base::colMeans(w_exp_ate * indicators))
   cdf_balance_proj <- abs(base::colMeans(w_proj_ate * indicators))
   
   ks_tests <- sqrt(n_sample) * c(
-    max(cdf_balance_exp), max(cdf_balance_proj), 
+    max(cdf_balance_ind), max(cdf_balance_exp), max(cdf_balance_proj), 
     max(cdf_balance_cbps), max(cdf_balance_cbps_o), 
     max(cdf_balance_cbps_a), max(cdf_balance_cbps_a_o), 
     max(cdf_balance_cbps_b), max(cdf_balance_cbps_b_o), 
@@ -639,105 +637,72 @@ for (i in 1:reps) {
   )
   
   cvm_tests <- c(
-    sum(cdf_balance_exp^2), sum(cdf_balance_proj^2), 
+    sum(cdf_balance_ind^2), sum(cdf_balance_exp^2), sum(cdf_balance_proj^2), 
     sum(cdf_balance_cbps^2), sum(cdf_balance_cbps_o^2), 
     sum(cdf_balance_cbps_a^2), sum(cdf_balance_cbps_a_o^2), 
     sum(cdf_balance_cbps_b^2), sum(cdf_balance_cbps_b_o^2), 
     sum(cdf_balance_cbps_c^2), sum(cdf_balance_cbps_c_o^2)
   )
   
-  wyniki[i, ] <- c(ate_IPS_ind$ate, 
-                   ate_IPS_proj$ate,
+  results2[i, ] <- c(ate_IPS_ind$ate,
+                    ate_IPS_exp$ate,
+                    ate_IPS_proj$ate,
                    ate_cbps$ate, ate_cbps_o$ate, 
                    ate_cbps2$ate, ate_cbps2_o$ate,
                    ate_cbps3$ate, ate_cbps3_o$ate,
                    ate_cbps4$ate, ate_cbps4_o$ate)
-  wyniki_qte[i, ] <- c(qte_IPS_exp$qte,
+  results2_qte[i, ] <- c(qte_IPS_ind$qte,
+                       qte_IPS_exp$qte,
                        qte_IPS_proj$qte,
                        qte_cbps$qte, qte_cbps_o$qte,
                        qte_cbps2$qte, qte_cbps2_o$qte,
                        qte_cbps3$qte, qte_cbps3_o$qte,
                        qte_cbps4$qte, qte_cbps4_o$qte)
   
-  wyniki_cvm[i, ] <- cvm_tests
-  wyniki_ks[i, ] <- ks_tests
+  results2_cvm[i, ] <- cvm_tests
+  results2_ks[i, ] <- ks_tests
 }
+
 ```
 
 ```{r}
-boxplot(wyniki, main = "ATE")
-boxplot(wyniki_cvm, main = "CVM")
-boxplot(wyniki_ks, main = "KS")
-sqrt((colMeans(wyniki, na.rm = T)-10)^2+ apply(wyniki, 2, var, na.rm = T))
-colMeans(wyniki_cvm)
-colMeans(wyniki_ks)
-```
-
-```{r}
-boxplot(wyniki_qte[, seq(5, 20, 5)])
-
-wyniki_qte_df <- wyniki_qte |> as.data.frame()
-names(wyniki_qte_df) <- paste0(rep(colnames(wyniki), 
+results_qte_df <- results_qte |> as.data.frame()
+names(results_qte_df) <- paste0(rep(colnames(results), 
                                   each = 5), "_", 1:5)
 
-setDT(wyniki_qte_df)
-wyniki_qte_df[, id:=1:reps]
-wyniki_qte_df <- melt(wyniki_qte_df, id.vars = "id")
-wyniki_qte_df[, c("est", "quant") := tstrsplit(variable, "_")]
-wyniki_qte_df[, est:=factor(est, colnames(wyniki))]
-# bias = mean(value) - 10, var = var(value), 
-wyniki_qte_df[, .(rmse = sqrt((mean(value) - 10)^2 + var(value))), .(est, quant)] |> 
-  dcast(quant ~ est, value.var = "rmse")
+setDT(results_qte_df)
+results_qte_df[, id:=1:reps]
+results_qte_df <- melt(results_qte_df, id.vars = "id")
+results_qte_df[, c("est", "quant") := tstrsplit(variable, "_")]
+results_qte_df[, est:=factor(est, colnames(results))]
 
-wyniki_qte_df[, .(bias = mean(value)-10), .(est, quant)] |> 
-  ggplot(data = _, aes(x = est, y = bias)) +
-  geom_col() +
-  facet_wrap(~quant, ncol = 5) +
-  theme(axis.text.x = element_text(vjust = 1, hjust = 1, angle = 45))
+## processing results  - 2
 
-```
-```{r}
-saveRDS(list(ATE = cbind(id=1:500,as.data.frame(wyniki)),
-             QTE = wyniki_qte_df,
-             CVM = cbind(id=1:500,as.data.frame(wyniki_cvm)),
-             KS = cbind(id=1:500,as.data.frame(wyniki_ks))),
-        file = "../results/sim1-dgp2-1000-proj.rds")
+results2_qte_df <- results2_qte |> as.data.frame()
+names(results2_qte_df) <- paste0(rep(colnames(results2), 
+                                  each = 5), "_", 1:5)
+
+setDT(results2_qte_df)
+results2_qte_df[, id:=1:reps]
+results2_qte_df <- melt(results2_qte_df, id.vars = "id")
+results2_qte_df[, c("est", "quant") := tstrsplit(variable, "_")]
+results2_qte_df[, est:=factor(est, colnames(results2))]
 ```
 
 ```{r}
-cbps <- function(tet, x) {
-  xs <- x$xs
-  treat <- x$treat
-  p <- plogis(as.numeric(xs %*% tet))
-  mat <- (treat / p - (1 - treat)/(1-p))*xs
-  return(mat)
-}
+## save results
+saveRDS(list(ATE = cbind(id=1:reps,as.data.frame(results)),
+             QTE = results_qte_df,
+             CVM = cbind(id=1:reps,as.data.frame(results_cvm)),
+             KS = cbind(id=1:reps,as.data.frame(results_ks))),
+        file = "../results/sim2-dgp1-1000.rds")
 
-cbps2 <- function(tet, x) {
-  xs <- x$xs
-  treat <- x$treat
-  p <- plogis(as.numeric(xs %*% tet))
-  mat <- (treat / p - (1 - treat))*xs
-  return(mat)
-}
-
-
-A <- model.matrix(~X1 + X2 + X3 + X4, data_sim1_cbps)
-
-res <- gmm::gmm(g = cbps2, 
-                x = list(xs = A,
-                         treat = data_sim1_cbps$Treat), 
-                t0 = rep(0, ncol(A)))
-
-p <- plogis(as.numeric(A %*% res$coefficients))
-
-apply(A_treated[, 1:5], 2, sum)
-apply(A_control[, 1:5], 2, function(x) sum(x/p[data_sim1_cbps$Treat == 0]))
-
-apply(data_sim1_control[, c("X1", "X2", "X3", "X4")], 2, weighted.mean, w=1/p[data_sim1_cbps$Treat == 0])
-apply(data_sim1_treated[, c("X1", "X2", "X3", "X4")], 2, mean)
-apply(data_sim1_control[, c("X1", "X2", "X3", "X4")], 2, weightedMedian, w=1/(1-p[data_sim1_cbps$Treat == 0]))
-apply(data_sim1_treated[, c("X1", "X2", "X3", "X4")], 2, weightedMedian, w=1/p[data_sim1_cbps$Treat == 1])
-
+saveRDS(list(ATE = cbind(id=1:reps,as.data.frame(results2)),
+             QTE = results2_qte_df,
+             CVM = cbind(id=1:reps,as.data.frame(results2_cvm)),
+             KS = cbind(id=1:reps,as.data.frame(results2_ks))),
+        file = "../results/sim2-dgp2-1000.rds")
 ```
+
+
 

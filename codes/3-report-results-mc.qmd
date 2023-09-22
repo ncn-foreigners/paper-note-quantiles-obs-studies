@@ -8,6 +8,7 @@ library(data.table)
 library(ggplot2)
 library(xtable)
 library(stringr)
+library(glue)
 options(xtable.include.rownames = FALSE)
 ```
 
@@ -32,59 +33,130 @@ sim1_results[var == "y3",
   xtable(digits = 4)
 ```
 
-
-# PS
+For appendix
 
 ```{r}
-sim1 <- readRDS("../results/sim1-dgp1-1000-proj.rds") 
-sqrt((colMeans(sim1$ATE[, -1]) - 10)^2 + apply(sim1$ATE[, -1], 2, var)) |> barplot()
+sim1_results[var == "y1", 
+             .(Bias = mean(value), Var = var(value), RMSE = sqrt(mean(value)^2 + var(value))),
+             .(design, est_p, we)] |> 
+  melt(id.vars = c("design", "est_p", "we")) |> 
+  dcast(variable + we + design ~ est_p, value.var = "value") |> 
+  {\(x) x[order(design, variable, we)]}() |>
+  transform(design = NULL) |> 
+  xtable(digits = 4)
 ```
 
+
 ```{r}
-sim2 <- readRDS("../results/sim1-dgp2-1000-proj.rds")
-sqrt((colMeans(sim2$ATE[, -1]) - 10)^2 + apply(sim2$ATE[, -1], 2, var)) |> barplot()
+sim1_results[var == "y2", 
+             .(Bias = mean(value), Var = var(value), RMSE = sqrt(mean(value)^2 + var(value))),
+             .(design, est_p, we)] |> 
+  melt(id.vars = c("design", "est_p", "we")) |> 
+  dcast(variable + we + design ~ est_p, value.var = "value") |> 
+  {\(x) x[order(design, variable, we)]}() |>
+  transform(design = NULL) |> 
+  xtable(digits = 4)
+```
+
+
+Plot
+
+```{r}
+for (des in c("d1", "d2", "d3")) {
+  sim1_results[, .(Bias = mean(value), SE = sd(value), RMSE = sqrt(mean(value)^2 + var(value))),
+             .(design, est_p, we, var)] |> 
+      melt(id.vars = c("design", "est_p", "we", "var")) |> 
+      subset(design == des) |> 
+      ggplot(data = _, aes(x = est_p, y = value, fill = we)) +
+      geom_col(position = "dodge", color = "black") +
+      facet_grid(var ~ variable , scales = "free", 
+                 labeller = labeller(var = c("y1"="Y1\nlinear",
+                                             "y2"="Y2\nmedium non-lin",
+                                             "y3"="Y3\nstrong non-lin"))) +
+      scale_fill_brewer(type = "qual", palette = "Set1") +
+      theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1)) +
+      labs(x = "Causal parameter", y = "Values (note different scales)", fill = "Estimator")
+  ggsave(filename = glue("../results/fig-sim-1-ebal-{des}.png"), width = 7, height = 5)
+}
+
+```
+
+Boxplots
+
+```{r}
+sim1_results |> 
+  ggplot(data = _, aes(x = est_p, y = value, color = we)) +
+  geom_hline(yintercept = 0, linetype = "dashed") + 
+  geom_boxplot() +
+  facet_grid(var ~ design, scale = "free_y") 
+```
+
+# Propensity score
+
+```{r}
+sim1 <- readRDS("../results/sim2-dgp1-1000.rds")
+sim2 <- readRDS("../results/sim2-dgp2-1000.rds")
 ```
 
 ```{r}
 sim2$ATE |> 
   melt(id.var = "id") |> 
   setDT() |> 
-  {\(x) x[, .(bias = mean(value)-10, stdev = sd(value), rmse = sqrt( (mean(value)-10)^2 + var(value))), .(est=variable)]}() |> 
+  {\(x) x[, .(Bias = mean(value)-10, Var = var(value), RMSE = sqrt( (mean(value)-10)^2 + var(value))), .(est=variable)]}() |> 
   transform(quant = "ATE") |> 
-  rbind(sim2$QTE[, .(bias = mean(value)-10, stdev = sd(value), rmse = sqrt( (mean(value)-10)^2 + var(value))), 
-         .(est, quant = factor(quant, 1:5, c("0.10", "0.25", "0.50", "0.75", "0.90")))] ) |> 
+  rbind(sim2$QTE[, .(Bias = mean(value)-10, Var = var(value), RMSE = sqrt( (mean(value)-10)^2 + var(value))), 
+                 .(est, quant = factor(quant, 1:5, c("0.10", "0.25", "0.50", "0.75", "0.90")))] ) |> 
   melt(id.vars = c("est", "quant")) |> 
-  transform(quant = factor(quant, c("ATE", "0.10", "0.25", "0.50", "0.75", "0.90"))) |> 
-  subset(est %in% c("IPS (exp)", "IPS (proj)", "CPBS (e)","CPBS (e MQ)" ,"CBPS (e MP)", "CPBS (e P)")) |> 
-  ggplot(data = _, aes(x = est, y = value)) +
-  geom_col() +
-  facet_grid(variable ~ quant)  +
-  theme(axis.text.x = element_text(vjust = 1, hjust = 1, angle = 45))
+  transform(quant = factor(quant, 
+                           c("ATE", "0.10", "0.25", "0.50", "0.75", "0.90"),
+                           c("ATE", "QTE(0.10)", "QTE(0.25)", "QTE(0.50)", "QTE(0.75)", "QTE(0.90)")),
+            est = factor(est,
+                         c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
+                           "CPBS (e)", "CBPS (e MQ)", "CBPS (e MP)", "CPBS (e P)", 
+                           "CBPS (o)", "CBPS (o MQ)", "CBPS (o MP)", "CPBS (o P)"),
+                         c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
+                           "CBPS (e)", "DBPS (e MQ)", "DBPS (e MP)", "DBPS (e P)", 
+                           "CBPS (o)", "DBPS (o MQ)", "DBPS (o MP)", "DBPS (o P)"))) -> sim2_results2
 
+sim2_results2 |>
+  dcast(variable + est ~ quant, value.var = "value") |>
+  subset(select = -variable) |> 
+  xtable(digits = 4) 
+  
 ```
+
 
 ```{r}
-sim2$ATE |> 
+sim1$ATE |> 
   melt(id.var = "id") |> 
   setDT() |> 
-  {\(x) x[, .(bias = mean(value)-10, stdev = sd(value), rmse = sqrt( (mean(value)-10)^2 + var(value))), .(est=variable)]}() |> 
+  {\(x) x[, .(Bias = mean(value)-10, Var = var(value), RMSE = sqrt( (mean(value)-10)^2 + var(value))), .(est=variable)]}() |> 
   transform(quant = "ATE") |> 
-  rbind(sim2$QTE[, .(bias = mean(value)-10, stdev = sd(value), rmse = sqrt( (mean(value)-10)^2 + var(value))), 
-         .(est, quant = factor(quant, 1:5, c("0.10", "0.25", "0.50", "0.75", "0.90")))] ) |> 
+  rbind(sim2$QTE[, .(Bias = mean(value)-10, Var = var(value), RMSE = sqrt( (mean(value)-10)^2 + var(value))), 
+                 .(est, quant = factor(quant, 1:5, c("0.10", "0.25", "0.50", "0.75", "0.90")))] ) |> 
   melt(id.vars = c("est", "quant")) |> 
-  #subset(est %in% c("IPS (exp)", "IPS (proj)", "CPBS (e)","CPBS (e MQ)" ,"CBPS (e MP)", "CPBS (e P)")) |>  
-  subset(quant %in% c("ATE", "0.10", "0.90") & variable %in% c("bias", "rmse")) |> 
-  transform(quant = paste(quant, variable),
-            variable = NULL) |> 
-  transform(quant = factor(quant, c("ATE bias", "ATE rmse", "0.10 bias", "0.10 rmse", "0.90 bias", "0.90 rmse"))) |> 
-  dcast(est ~ quant, value.var = "value") |> 
-  xtable() |> 
-  print.xtable(include.rownames = F)
-```
+  transform(quant = factor(quant, 
+                           c("ATE", "0.10", "0.25", "0.50", "0.75", "0.90"),
+                           c("ATE", "QTE(0.10)", "QTE(0.25)", "QTE(0.50)", "QTE(0.75)", "QTE(0.90)")),
+            est = factor(est,
+                         c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
+                           "CPBS (e)", "CBPS (e MQ)", "CBPS (e MP)", "CPBS (e P)", 
+                           "CBPS (o)", "CBPS (o MQ)", "CBPS (o MP)", "CPBS (o P)"),
+                         c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
+                           "CBPS (e)", "DBPS (e MQ)", "DBPS (e MP)", "DBPS (e P)", 
+                           "CBPS (o)", "DBPS (o MQ)", "DBPS (o MP)", "DBPS (o P)")))-> sim2_results1
 
+sim2_results1 |> 
+  dcast(variable + est ~ quant, value.var = "value") |>
+  subset(select = -variable) |> 
+  xtable(digits = 4) 
+  
+```
 Statistics regarding distributions
 
 ```{r}
+setnames(x = sim2$CVM, old = names(sim2$CVM), new=names(sim2$KS))
+
 sim2$CVM |> 
   setDT() |> 
   melt(id.vars = "id") |> 
@@ -95,7 +167,55 @@ sim2$CVM |>
                 melt(id.vars = "id") |> 
                 {\(x) x[, .(ks_mean=mean(value), ks_median=median(value)), .(variable)]}() },
         by = "variable") |> 
+  transform(variable = factor(variable,
+                         c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
+                           "CPBS (e)", "CBPS (e MQ)", "CBPS (e MP)", "CPBS (e P)", 
+                           "CBPS (o)", "CBPS (o MQ)", "CBPS (o MP)", "CPBS (o P)"))) |>
   xtable() |> 
   print.xtable(include.rownames = F)
+```
+```{r}
+setnames(x = sim1$CVM, old = names(sim1$CVM), new=names(sim1$KS))
+
+sim1$CVM |> 
+  setDT() |> 
+  melt(id.vars = "id") |> 
+  {\(x) x[, .(cvm_mean=mean(value), cvm_median=median(value)), .(variable)]}() |> 
+  merge(x = _,
+        y = {sim2$KS |> 
+                setDT() |> 
+                melt(id.vars = "id") |> 
+                {\(x) x[, .(ks_mean=mean(value), ks_median=median(value)), .(variable)]}() },
+        by = "variable") |> 
+  transform(variable = factor(variable,
+                         c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
+                           "CPBS (e)", "CBPS (e MQ)", "CBPS (e MP)", "CPBS (e P)", 
+                           "CBPS (o)", "CBPS (o MQ)", "CBPS (o MP)", "CPBS (o P)"))) |>
+  xtable() |> 
+  print.xtable(include.rownames = F)
+```
+
+```{r}
+sim2_results1 |> 
+  #subset(est %in% c("IPS (ind)", "IPS (exp)", "IPS (proj)", "DBPS (e P)", "DBPS (o P)")) |> 
+  #transform(est = factor(est, c("IPS (ind)", "IPS (exp)", "IPS (proj)", "DBPS (e P)", "DBPS (o P)"))) |> 
+      ggplot(data = _, aes(x = est, y = value)) +
+      geom_col(position = "dodge", color = "black") +
+      facet_grid(variable~quant, scales = "free_y") + 
+      #scale_fill_brewer(type = "qual", palette = "Set") +
+      theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1)) +
+      labs(x = "Causal parameter", y = "Values (note different scales)", fill = "Estimator")
+```
+
+```{r}
+sim2_results2 |> 
+  #subset(est %in% c("IPS (ind)", "IPS (exp)", "IPS (proj)", "DBPS (e P)", "DBPS (o P)")) |> 
+  #transform(est = factor(est, c("IPS (ind)", "IPS (exp)", "IPS (proj)", "DBPS (e P)", "DBPS (o P)"))) |> 
+      ggplot(data = _, aes(x = est, y = value)) +
+      geom_col(position = "dodge", color = "black") +
+      facet_grid(variable~quant, scales = "free_y") + 
+      #scale_fill_brewer(type = "qual", palette = "Set") +
+      theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1)) +
+      labs(x = "Causal parameter", y = "Values (note different scales)", fill = "Estimator")
 ```
 

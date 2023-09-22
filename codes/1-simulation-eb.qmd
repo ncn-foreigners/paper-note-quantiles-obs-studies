@@ -1,18 +1,35 @@
 ---
-title: "Untitled"
-format: html
+title: "Simulation for the entropy balancing method"
+author: "Maciej Beręsewicz"
+format: 
+  html:
+    self-contained: true
+    table-of-contents: true
+    number-sections: true
+    df-print: kable
+editor: source
+execute: 
+  eval: false
+  warning: false
+  message: false
+toc-title: Contents
+lang: en
 ---
 
 # Install packages
 
-```{r}
-#install.packages("remotes")
+Install relevant packages for the paper. The `jointCalib` package is available at CRAN but we install the package from github (development version)
+
+```{r install-package}
+#install.packages(c("remotes", "ebal", "mvnfast", "data.table", "ggplot2", "laeken"))
 remotes::install_github("ncn-foreigners/jointCalib@dev")
 ```
 
 # Load packages
 
-```{r}
+Load required packages
+
+```{r load-packages}
 library(jointCalib)
 library(ebal)
 library(mvnfast)
@@ -21,18 +38,14 @@ library(ggplot2)
 library(laeken)
 ```
 
-```{r}
-source("functions.R")
-```
-
 # Simulation from the paper
 
-Generate data 
+Generate data as described in the section 4.
 
-```{r}
-n <- 2000
-n_sample <- 1000
-mu <- c(0, 0, 0)
+```{r simulation-study}
+n <- 2000 ## initial sample size
+n_sample <- 1000 ## required sample size n_0=n_1=n (#n control = #n treatment)
+mu <- c(0, 0, 0) 
 Sigma <- matrix(c(2, 1, -1,
                   1, 1, -0.5,
                   -1,-0.5, 1), 
@@ -66,11 +79,11 @@ for (b in 1:B) {
   y3 <- (x1 + x2 + x5)^2 + eta
   df <- data.frame(id =1:n, x1,x2,x3,x4,x5,x6,d1,d2,d3,y1,y2,y3) |> setDT()
   df_long <- melt(df, id.vars = c(1:7,11:13), value.name = "treatment", variable.name = "design")
-  df_long <- df_long[, .SD[sample(.N, n_sample, replace = T)], by = .(design, treatment)]
   
   ## sample by 1000 from reach group
+  df_long <- df_long[, .SD[sample(.N, n_sample, replace = T)], by = .(design, treatment)]
   y_results <- list()
-  
+
   for (des in c("d1", "d2", "d3")) {
     df_long_des <- df_long[design == des]
     ebal_res <- ebalance(Treatment = df_long_des$treatment, 
@@ -90,7 +103,7 @@ for (b in 1:B) {
     
     df_long_des[treatment == 0, ":="(w_ebal=ebal_res$w, w_mq1=mq1_res$g, w_mp1=mp1_res$g)]
     df_long_des[treatment == 1, ":="(w_ebal=1,          w_mq1=1,         w_mp1=1)]
-    
+  
     y1_res <- df_long_des[, lapply(.SD, 
                           FUN = function(x) weighted.mean(y1[treatment==1], x[treatment==1]) - weighted.mean(y1[treatment==0], x[treatment==0])), 
                          .SDcols = patterns("w_")][, ":="(var="y1", est="att", tau=NA)]
@@ -116,25 +129,48 @@ for (b in 1:B) {
                           FUN = function(x) weightedQuantile(y3[treatment==1], x[treatment==1], tau) - 
                                             weightedQuantile(y3[treatment==0], x[treatment==0],tau)), 
                          .SDcols = patterns("w_")][, ":="(var="y3", est="qtt", tau=tau)]
+
     
     y_results[[des]] <- rbind(y1_res,y2_res,y3_res, y1_res_q, y2_res_q, y3_res_q)
+
   }
 
   result_total[[b]] <- rbindlist(y_results, idcol = "design")
-  
   
 }
 
 ```
 
-```{r}
+Process data and save to `result_total_df` data.frame with names:
+
++ `b` - MC sample
++ `design` - design: d1, d2, d3
++ `var` - target: y1, y2, y3
++ `est` - causal parameter: att, qtt
++ `tau` - quantile: 0.1, 0.25, 0.50, 0.75, 0.90
++ `weight` - weight based on method: w_ebal, w_mq1, w_mp1
++ `value` - estimator value
+
+```{r transform-results}
 result_total_df <- rbindlist(result_total, idcol = "b") |> 
-  melt(id.vars = c("b", "design", "var", "est", "tau"), variable.name = "weight", value.name = "value")
+  melt(id.vars = c("b", 
+                   "design", 
+                   "var", 
+                   "est", 
+                   "tau"), 
+       variable.name = "weight", value.name = "value")
 ```
 
-```{r}
+Save results to RDS 
+
+```{r save-to-rds}
 saveRDS(result_total_df, 
         file = "../results/sim1-ebal.rds")
 ```
 
+and to csv
+
+```{r save-to-csv}
+fwrite(x = result_total_df, file = "../results/sim1-ebal.csv")
+```
 
