@@ -3623,12 +3623,18 @@ vertical-align: -.125em;
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="at">data =</span> _, <span class="fu">aes</span>(<span class="at">x =</span> est_p, <span class="at">y =</span> value, <span class="at">color =</span> we)) <span class="sc">+</span></span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="dv">0</span>, <span class="at">linetype =</span> <span class="st">&quot;dashed&quot;</span>) <span class="sc">+</span> </span>
 <span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_boxplot</span>() <span class="sc">+</span></span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_grid</span>(var <span class="sc">~</span> design, <span class="at">scale =</span> <span class="st">&quot;free_y&quot;</span>) <span class="sc">+</span></span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_brewer</span>(<span class="at">type =</span> <span class="st">&quot;qual&quot;</span>, <span class="at">palette =</span> <span class="st">&quot;Set1&quot;</span>) <span class="sc">+</span></span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">&quot;Causal parameter&quot;</span>, <span class="at">y =</span> <span class="st">&quot;Value&quot;</span>, <span class="at">color =</span> <span class="st">&quot;Method&quot;</span>) <span class="sc">+</span></span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="dv">45</span>, <span class="at">vjust=</span><span class="dv">1</span>,<span class="at">hjust=</span><span class="dv">1</span>)) <span class="ot">-&gt;</span> p1</span>
-<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsave</span>(<span class="at">plot =</span> p1, <span class="at">filename =</span> <span class="fu">glue</span>(<span class="st">&quot;../results/fig-sim-1-ebal-boxplot.png&quot;</span>), <span class="at">width =</span> <span class="dv">7</span>, <span class="at">height =</span> <span class="dv">5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_grid</span>(var <span class="sc">~</span> design, <span class="at">scale =</span> <span class="st">&quot;free_y&quot;</span>,</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>             <span class="at">labeller =</span> <span class="fu">labeller</span>(<span class="at">var =</span> <span class="fu">c</span>(<span class="st">&quot;y1&quot;</span><span class="ot">=</span><span class="st">&quot;Y1 (linear)&quot;</span>, </span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>                                         <span class="st">&quot;y2&quot;</span><span class="ot">=</span><span class="st">&quot;Y2 (weak non-lin)&quot;</span>,</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>                                         <span class="st">&quot;y3&quot;</span><span class="ot">=</span><span class="st">&quot;Y3 (stron non-lin)&quot;</span>),</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>                                 <span class="at">design =</span> <span class="fu">c</span>(<span class="st">&quot;d1&quot;</span><span class="ot">=</span><span class="st">&quot;D1 (strong sep, norm)&quot;</span>,</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>                                            <span class="st">&quot;d2&quot;</span><span class="ot">=</span><span class="st">&quot;D2 (weak sep, norm)&quot;</span>,</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>                                            <span class="st">&quot;d3&quot;</span><span class="ot">=</span><span class="st">&quot;D3 (medium sep, lep)&quot;</span>))) <span class="sc">+</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_brewer</span>(<span class="at">type =</span> <span class="st">&quot;qual&quot;</span>, <span class="at">palette =</span> <span class="st">&quot;Set1&quot;</span>) <span class="sc">+</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">&quot;Causal parameter&quot;</span>, <span class="at">y =</span> <span class="st">&quot;Value&quot;</span>, <span class="at">color =</span> <span class="st">&quot;Method&quot;</span>) <span class="sc">+</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="dv">45</span>, <span class="at">vjust=</span><span class="dv">1</span>,<span class="at">hjust=</span><span class="dv">1</span>)) <span class="ot">-&gt;</span> p1</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsave</span>(<span class="at">plot =</span> p1, <span class="at">filename =</span> <span class="fu">glue</span>(<span class="st">&quot;../results/fig-sim-1-ebal-boxplot.png&quot;</span>), <span class="at">width =</span> <span class="dv">7</span>, <span class="at">height =</span> <span class="dv">5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="result-for-the-simulation-1-propensity-score" class="level1" data-number="3">
@@ -3996,7 +4002,7 @@ vertical-align: -.125em;
 <span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">setDT</span>() <span class="sc">|&gt;</span> </span>
 <span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  {\(x) x[, .(<span class="at">Bias =</span> <span class="fu">mean</span>(value)<span class="sc">-</span><span class="dv">10</span>, <span class="at">Var =</span> <span class="fu">var</span>(value), <span class="at">RMSE =</span> <span class="fu">sqrt</span>( (<span class="fu">mean</span>(value)<span class="sc">-</span><span class="dv">10</span>)<span class="sc">^</span><span class="dv">2</span> <span class="sc">+</span> <span class="fu">var</span>(value))), .(<span class="at">est=</span>variable)]}() <span class="sc">|&gt;</span> </span>
 <span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transform</span>(<span class="at">quant =</span> <span class="st">&quot;ATE&quot;</span>) <span class="sc">|&gt;</span> </span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rbind</span>(sim2<span class="sc">$</span>QTE[, .(<span class="at">Bias =</span> <span class="fu">mean</span>(value)<span class="sc">-</span><span class="dv">10</span>, <span class="at">Var =</span> <span class="fu">var</span>(value), <span class="at">RMSE =</span> <span class="fu">sqrt</span>( (<span class="fu">mean</span>(value)<span class="sc">-</span><span class="dv">10</span>)<span class="sc">^</span><span class="dv">2</span> <span class="sc">+</span> <span class="fu">var</span>(value))), </span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rbind</span>(sim1<span class="sc">$</span>QTE[, .(<span class="at">Bias =</span> <span class="fu">mean</span>(value)<span class="sc">-</span><span class="dv">10</span>, <span class="at">Var =</span> <span class="fu">var</span>(value), <span class="at">RMSE =</span> <span class="fu">sqrt</span>( (<span class="fu">mean</span>(value)<span class="sc">-</span><span class="dv">10</span>)<span class="sc">^</span><span class="dv">2</span> <span class="sc">+</span> <span class="fu">var</span>(value))), </span>
 <span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>                 .(est, <span class="at">quant =</span> <span class="fu">factor</span>(quant, <span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>, <span class="fu">c</span>(<span class="st">&quot;0.10&quot;</span>, <span class="st">&quot;0.25&quot;</span>, <span class="st">&quot;0.50&quot;</span>, <span class="st">&quot;0.75&quot;</span>, <span class="st">&quot;0.90&quot;</span>)))] ) <span class="sc">|&gt;</span> </span>
 <span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">melt</span>(<span class="at">id.vars =</span> <span class="fu">c</span>(<span class="st">&quot;est&quot;</span>, <span class="st">&quot;quant&quot;</span>)) <span class="sc">|&gt;</span> </span>
 <span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transform</span>(<span class="at">quant =</span> <span class="fu">factor</span>(quant, </span>
@@ -4041,299 +4047,299 @@ vertical-align: -.125em;
 <tr class="odd">
 <td style="text-align: left;">IPS (exp)</td>
 <td style="text-align: right;">-0.0378475</td>
-<td style="text-align: right;">-4.0189800</td>
-<td style="text-align: right;">-2.2246727</td>
-<td style="text-align: right;">0.7095287</td>
-<td style="text-align: right;">5.2300513</td>
-<td style="text-align: right;">10.4739521</td>
+<td style="text-align: right;">0.0278759</td>
+<td style="text-align: right;">-0.0371040</td>
+<td style="text-align: right;">-0.2569729</td>
+<td style="text-align: right;">0.0194913</td>
+<td style="text-align: right;">0.0705744</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">IPS (ind)</td>
 <td style="text-align: right;">0.3535896</td>
-<td style="text-align: right;">-3.0930759</td>
-<td style="text-align: right;">-1.3918001</td>
-<td style="text-align: right;">1.1960453</td>
-<td style="text-align: right;">5.1095809</td>
-<td style="text-align: right;">9.4856179</td>
+<td style="text-align: right;">0.1618483</td>
+<td style="text-align: right;">0.1558859</td>
+<td style="text-align: right;">0.1256088</td>
+<td style="text-align: right;">0.5079294</td>
+<td style="text-align: right;">0.7945692</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">IPS (proj)</td>
 <td style="text-align: right;">-0.0389546</td>
-<td style="text-align: right;">-2.6261304</td>
-<td style="text-align: right;">-1.8409450</td>
-<td style="text-align: right;">-0.4423497</td>
-<td style="text-align: right;">1.9470523</td>
-<td style="text-align: right;">4.2647750</td>
+<td style="text-align: right;">0.0177181</td>
+<td style="text-align: right;">-0.0339662</td>
+<td style="text-align: right;">-0.2509503</td>
+<td style="text-align: right;">0.0143999</td>
+<td style="text-align: right;">0.0863470</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">CBPS (e)</td>
 <td style="text-align: right;">-0.1158333</td>
-<td style="text-align: right;">-3.2477797</td>
-<td style="text-align: right;">-1.4446769</td>
-<td style="text-align: right;">1.4963983</td>
-<td style="text-align: right;">5.8841223</td>
-<td style="text-align: right;">10.5781850</td>
+<td style="text-align: right;">-0.0333891</td>
+<td style="text-align: right;">-0.0619973</td>
+<td style="text-align: right;">-0.3772095</td>
+<td style="text-align: right;">-0.0747822</td>
+<td style="text-align: right;">-0.0619401</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">DBPS (e MQ)</td>
 <td style="text-align: right;">-0.0485158</td>
-<td style="text-align: right;">-1.4791837</td>
-<td style="text-align: right;">-0.8638920</td>
-<td style="text-align: right;">-0.0642073</td>
-<td style="text-align: right;">1.8188263</td>
-<td style="text-align: right;">4.1355435</td>
+<td style="text-align: right;">-0.0204302</td>
+<td style="text-align: right;">-0.0619024</td>
+<td style="text-align: right;">-0.2350276</td>
+<td style="text-align: right;">0.0113111</td>
+<td style="text-align: right;">0.2195890</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">DBPS (e MP)</td>
 <td style="text-align: right;">-0.0208235</td>
-<td style="text-align: right;">-1.2441248</td>
-<td style="text-align: right;">-0.8091856</td>
-<td style="text-align: right;">-0.1932650</td>
-<td style="text-align: right;">1.1208650</td>
-<td style="text-align: right;">2.5603690</td>
+<td style="text-align: right;">-0.0164723</td>
+<td style="text-align: right;">-0.0653820</td>
+<td style="text-align: right;">-0.1872464</td>
+<td style="text-align: right;">0.0307380</td>
+<td style="text-align: right;">0.3949905</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">DBPS (e P)</td>
 <td style="text-align: right;">-0.4776513</td>
-<td style="text-align: right;">-0.4936499</td>
-<td style="text-align: right;">-0.6743258</td>
-<td style="text-align: right;">-0.5460880</td>
-<td style="text-align: right;">-0.2157602</td>
-<td style="text-align: right;">-0.4357232</td>
+<td style="text-align: right;">1.0185589</td>
+<td style="text-align: right;">0.4194857</td>
+<td style="text-align: right;">-0.3892686</td>
+<td style="text-align: right;">-1.1202592</td>
+<td style="text-align: right;">-2.1374814</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">CBPS (o)</td>
 <td style="text-align: right;">-0.1302798</td>
-<td style="text-align: right;">-2.9018540</td>
-<td style="text-align: right;">-1.1142175</td>
-<td style="text-align: right;">1.7326998</td>
-<td style="text-align: right;">6.0673610</td>
-<td style="text-align: right;">11.2098597</td>
+<td style="text-align: right;">-0.0627731</td>
+<td style="text-align: right;">-0.1348611</td>
+<td style="text-align: right;">-0.3353328</td>
+<td style="text-align: right;">-0.0715463</td>
+<td style="text-align: right;">-0.0207509</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">DBPS (o MQ)</td>
 <td style="text-align: right;">-0.0485158</td>
-<td style="text-align: right;">-1.1226613</td>
-<td style="text-align: right;">-0.6875755</td>
-<td style="text-align: right;">-0.1782599</td>
-<td style="text-align: right;">1.1199281</td>
-<td style="text-align: right;">2.9258116</td>
+<td style="text-align: right;">0.0394591</td>
+<td style="text-align: right;">-0.0649444</td>
+<td style="text-align: right;">-0.3006883</td>
+<td style="text-align: right;">-0.1278591</td>
+<td style="text-align: right;">-0.0503186</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">DBPS (o MP)</td>
 <td style="text-align: right;">-0.0220312</td>
-<td style="text-align: right;">-0.7870124</td>
-<td style="text-align: right;">-0.5273513</td>
-<td style="text-align: right;">-0.0615868</td>
-<td style="text-align: right;">0.8368510</td>
-<td style="text-align: right;">1.8840983</td>
+<td style="text-align: right;">0.0056018</td>
+<td style="text-align: right;">-0.0843276</td>
+<td style="text-align: right;">-0.2131529</td>
+<td style="text-align: right;">0.0576612</td>
+<td style="text-align: right;">0.3010540</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">DBPS (o P)</td>
 <td style="text-align: right;">0.0083574</td>
-<td style="text-align: right;">0.0238700</td>
-<td style="text-align: right;">-0.1466003</td>
-<td style="text-align: right;">-0.0089896</td>
-<td style="text-align: right;">0.3576011</td>
-<td style="text-align: right;">0.3467751</td>
+<td style="text-align: right;">0.9148042</td>
+<td style="text-align: right;">0.4509024</td>
+<td style="text-align: right;">-0.0333601</td>
+<td style="text-align: right;">-0.2881726</td>
+<td style="text-align: right;">-0.8202561</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">IPS (exp)</td>
 <td style="text-align: right;">6.8487557</td>
-<td style="text-align: right;">13.8096218</td>
-<td style="text-align: right;">9.8939291</td>
-<td style="text-align: right;">8.0500193</td>
-<td style="text-align: right;">13.4848800</td>
-<td style="text-align: right;">38.8826937</td>
+<td style="text-align: right;">12.8167328</td>
+<td style="text-align: right;">9.5348293</td>
+<td style="text-align: right;">8.5481085</td>
+<td style="text-align: right;">14.6862613</td>
+<td style="text-align: right;">36.0199803</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">IPS (ind)</td>
 <td style="text-align: right;">6.4537938</td>
-<td style="text-align: right;">15.4085398</td>
-<td style="text-align: right;">11.1044114</td>
-<td style="text-align: right;">8.8529833</td>
-<td style="text-align: right;">14.4144744</td>
-<td style="text-align: right;">34.6430042</td>
+<td style="text-align: right;">13.5540464</td>
+<td style="text-align: right;">10.8244289</td>
+<td style="text-align: right;">9.1451737</td>
+<td style="text-align: right;">14.1256672</td>
+<td style="text-align: right;">31.2927414</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">IPS (proj)</td>
 <td style="text-align: right;">6.6207211</td>
-<td style="text-align: right;">14.6141170</td>
-<td style="text-align: right;">10.8651504</td>
-<td style="text-align: right;">7.9916819</td>
-<td style="text-align: right;">12.8501174</td>
-<td style="text-align: right;">31.4331099</td>
+<td style="text-align: right;">12.8720322</td>
+<td style="text-align: right;">9.5067266</td>
+<td style="text-align: right;">8.4839255</td>
+<td style="text-align: right;">14.2257727</td>
+<td style="text-align: right;">34.4839476</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">CBPS (e)</td>
 <td style="text-align: right;">7.7502257</td>
-<td style="text-align: right;">13.2422753</td>
-<td style="text-align: right;">9.5447927</td>
-<td style="text-align: right;">8.4143465</td>
-<td style="text-align: right;">14.5832297</td>
-<td style="text-align: right;">35.3576625</td>
+<td style="text-align: right;">11.2431306</td>
+<td style="text-align: right;">9.0806686</td>
+<td style="text-align: right;">9.7303614</td>
+<td style="text-align: right;">17.0821332</td>
+<td style="text-align: right;">39.5007332</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">DBPS (e MQ)</td>
 <td style="text-align: right;">7.1256771</td>
-<td style="text-align: right;">11.2284255</td>
-<td style="text-align: right;">8.8770188</td>
-<td style="text-align: right;">8.5188770</td>
-<td style="text-align: right;">12.2347793</td>
-<td style="text-align: right;">24.3055090</td>
+<td style="text-align: right;">11.1017392</td>
+<td style="text-align: right;">9.4488203</td>
+<td style="text-align: right;">9.2409177</td>
+<td style="text-align: right;">14.6424214</td>
+<td style="text-align: right;">35.2882116</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">DBPS (e MP)</td>
 <td style="text-align: right;">7.0746941</td>
-<td style="text-align: right;">12.2954204</td>
-<td style="text-align: right;">9.9443972</td>
-<td style="text-align: right;">9.2285919</td>
-<td style="text-align: right;">12.8167234</td>
-<td style="text-align: right;">25.2888074</td>
+<td style="text-align: right;">12.3000907</td>
+<td style="text-align: right;">9.9327892</td>
+<td style="text-align: right;">9.6851786</td>
+<td style="text-align: right;">15.7339609</td>
+<td style="text-align: right;">35.5980964</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">DBPS (e P)</td>
 <td style="text-align: right;">6.1780838</td>
-<td style="text-align: right;">11.6075401</td>
-<td style="text-align: right;">9.7879764</td>
-<td style="text-align: right;">8.7242759</td>
-<td style="text-align: right;">12.1643885</td>
-<td style="text-align: right;">22.9389471</td>
+<td style="text-align: right;">11.1419676</td>
+<td style="text-align: right;">9.5544796</td>
+<td style="text-align: right;">9.3013779</td>
+<td style="text-align: right;">14.5493308</td>
+<td style="text-align: right;">29.7209550</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">CBPS (o)</td>
 <td style="text-align: right;">7.6880929</td>
-<td style="text-align: right;">12.1805315</td>
-<td style="text-align: right;">9.4588746</td>
-<td style="text-align: right;">8.5987946</td>
-<td style="text-align: right;">15.6431324</td>
-<td style="text-align: right;">42.3916084</td>
+<td style="text-align: right;">11.2359719</td>
+<td style="text-align: right;">9.0135447</td>
+<td style="text-align: right;">9.6730060</td>
+<td style="text-align: right;">16.5078033</td>
+<td style="text-align: right;">37.8700831</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">DBPS (o MQ)</td>
 <td style="text-align: right;">7.1256771</td>
-<td style="text-align: right;">10.5597209</td>
-<td style="text-align: right;">8.4340290</td>
-<td style="text-align: right;">8.1759626</td>
-<td style="text-align: right;">11.6607812</td>
-<td style="text-align: right;">23.6440111</td>
+<td style="text-align: right;">11.0553778</td>
+<td style="text-align: right;">9.0681334</td>
+<td style="text-align: right;">8.6421882</td>
+<td style="text-align: right;">13.2661924</td>
+<td style="text-align: right;">28.7041562</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">DBPS (o MP)</td>
 <td style="text-align: right;">5.8066485</td>
-<td style="text-align: right;">10.7478925</td>
-<td style="text-align: right;">8.6797056</td>
-<td style="text-align: right;">8.0561380</td>
-<td style="text-align: right;">10.7196980</td>
-<td style="text-align: right;">19.8877995</td>
+<td style="text-align: right;">11.2074552</td>
+<td style="text-align: right;">9.0012358</td>
+<td style="text-align: right;">8.5178335</td>
+<td style="text-align: right;">12.4013140</td>
+<td style="text-align: right;">24.7986185</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">DBPS (o P)</td>
 <td style="text-align: right;">5.4536100</td>
-<td style="text-align: right;">10.5076702</td>
-<td style="text-align: right;">8.5301164</td>
-<td style="text-align: right;">7.9813839</td>
-<td style="text-align: right;">10.8402750</td>
-<td style="text-align: right;">20.0139394</td>
+<td style="text-align: right;">10.9623261</td>
+<td style="text-align: right;">8.9960637</td>
+<td style="text-align: right;">8.4550004</td>
+<td style="text-align: right;">12.2454113</td>
+<td style="text-align: right;">23.0597226</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">IPS (exp)</td>
 <td style="text-align: right;">2.6172864</td>
-<td style="text-align: right;">5.4737393</td>
-<td style="text-align: right;">3.8526741</td>
-<td style="text-align: right;">2.9246282</td>
-<td style="text-align: right;">6.3904864</td>
-<td style="text-align: right;">12.1896008</td>
+<td style="text-align: right;">3.5801550</td>
+<td style="text-align: right;">3.0880748</td>
+<td style="text-align: right;">2.9349861</td>
+<td style="text-align: right;">3.8323154</td>
+<td style="text-align: right;">6.0020797</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">IPS (ind)</td>
 <td style="text-align: right;">2.5649209</td>
-<td style="text-align: right;">4.9975653</td>
-<td style="text-align: right;">3.6113043</td>
-<td style="text-align: right;">3.2067909</td>
-<td style="text-align: right;">6.3657122</td>
-<td style="text-align: right;">11.1633306</td>
+<td style="text-align: right;">3.6851379</td>
+<td style="text-align: right;">3.2937409</td>
+<td style="text-align: right;">3.0267063</td>
+<td style="text-align: right;">3.7925795</td>
+<td style="text-align: right;">5.6501400</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">IPS (proj)</td>
 <td style="text-align: right;">2.5733711</td>
-<td style="text-align: right;">4.6379605</td>
-<td style="text-align: right;">3.7754773</td>
-<td style="text-align: right;">2.8613555</td>
-<td style="text-align: right;">4.0793541</td>
-<td style="text-align: right;">7.0442470</td>
+<td style="text-align: right;">3.5878052</td>
+<td style="text-align: right;">3.0834851</td>
+<td style="text-align: right;">2.9235084</td>
+<td style="text-align: right;">3.7717344</td>
+<td style="text-align: right;">5.8729382</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">CBPS (e)</td>
 <td style="text-align: right;">2.7863315</td>
-<td style="text-align: right;">4.8775351</td>
-<td style="text-align: right;">3.4105548</td>
-<td style="text-align: right;">3.2639783</td>
-<td style="text-align: right;">7.0147078</td>
-<td style="text-align: right;">12.1348944</td>
+<td style="text-align: right;">3.3532440</td>
+<td style="text-align: right;">3.0140525</td>
+<td style="text-align: right;">3.1420771</td>
+<td style="text-align: right;">4.1337302</td>
+<td style="text-align: right;">6.2852661</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">DBPS (e MQ)</td>
 <td style="text-align: right;">2.6698372</td>
-<td style="text-align: right;">3.6628418</td>
-<td style="text-align: right;">3.1021490</td>
-<td style="text-align: right;">2.9194177</td>
-<td style="text-align: right;">3.9424496</td>
-<td style="text-align: right;">6.4349226</td>
+<td style="text-align: right;">3.3319899</td>
+<td style="text-align: right;">3.0745166</td>
+<td style="text-align: right;">3.0489598</td>
+<td style="text-align: right;">3.8265584</td>
+<td style="text-align: right;">5.9444454</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">DBPS (e MP)</td>
 <td style="text-align: right;">2.6599112</td>
-<td style="text-align: right;">3.7206541</td>
-<td style="text-align: right;">3.2556379</td>
-<td style="text-align: right;">3.0440012</td>
-<td style="text-align: right;">3.7514080</td>
-<td style="text-align: right;">5.6430751</td>
+<td style="text-align: right;">3.5071872</td>
+<td style="text-align: right;">3.1523109</td>
+<td style="text-align: right;">3.1177299</td>
+<td style="text-align: right;">3.9667248</td>
+<td style="text-align: right;">5.9794744</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">DBPS (e P)</td>
 <td style="text-align: right;">2.5310540</td>
-<td style="text-align: right;">3.4425616</td>
-<td style="text-align: right;">3.2004206</td>
-<td style="text-align: right;">3.0037457</td>
-<td style="text-align: right;">3.4944157</td>
-<td style="text-align: right;">4.8092413</td>
+<td style="text-align: right;">3.4899040</td>
+<td style="text-align: right;">3.1193666</td>
+<td style="text-align: right;">3.0745582</td>
+<td style="text-align: right;">3.9754637</td>
+<td style="text-align: right;">5.8557477</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">CBPS (o)</td>
 <td style="text-align: right;">2.7758000</td>
-<td style="text-align: right;">4.5388642</td>
-<td style="text-align: right;">3.2711398</td>
-<td style="text-align: right;">3.4060304</td>
-<td style="text-align: right;">7.2426516</td>
-<td style="text-align: right;">12.9635089</td>
+<td style="text-align: right;">3.3525979</td>
+<td style="text-align: right;">3.0052840</td>
+<td style="text-align: right;">3.1281710</td>
+<td style="text-align: right;">4.0636095</td>
+<td style="text-align: right;">6.1539023</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">DBPS (o MQ)</td>
 <td style="text-align: right;">2.6698372</td>
-<td style="text-align: right;">3.4380357</td>
-<td style="text-align: right;">2.9844244</td>
-<td style="text-align: right;">2.8649152</td>
-<td style="text-align: right;">3.5937474</td>
-<td style="text-align: right;">5.6748907</td>
+<td style="text-align: right;">3.3251970</td>
+<td style="text-align: right;">3.0120344</td>
+<td style="text-align: right;">2.9550976</td>
+<td style="text-align: right;">3.6445220</td>
+<td style="text-align: right;">5.3578623</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">DBPS (o MP)</td>
 <td style="text-align: right;">2.4097995</td>
-<td style="text-align: right;">3.3715399</td>
-<td style="text-align: right;">2.9929593</td>
-<td style="text-align: right;">2.8390017</td>
-<td style="text-align: right;">3.3793517</td>
-<td style="text-align: right;">4.8412422</td>
+<td style="text-align: right;">3.3477584</td>
+<td style="text-align: right;">3.0013908</td>
+<td style="text-align: right;">2.9263062</td>
+<td style="text-align: right;">3.5220220</td>
+<td style="text-align: right;">4.9889129</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">DBPS (o P)</td>
 <td style="text-align: right;">2.3353115</td>
-<td style="text-align: right;">3.2416416</td>
-<td style="text-align: right;">2.9243133</td>
-<td style="text-align: right;">2.8251486</td>
-<td style="text-align: right;">3.3118203</td>
-<td style="text-align: right;">4.4871140</td>
+<td style="text-align: right;">3.4349953</td>
+<td style="text-align: right;">3.0330474</td>
+<td style="text-align: right;">2.9079397</td>
+<td style="text-align: right;">3.5111899</td>
+<td style="text-align: right;">4.8716058</td>
 </tr>
 </tbody>
 </table>
@@ -4358,7 +4364,10 @@ vertical-align: -.125em;
 <span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transform</span>(<span class="at">variable =</span> <span class="fu">factor</span>(variable,</span>
 <span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>                         <span class="fu">c</span>(<span class="st">&quot;IPS (exp)&quot;</span>, <span class="st">&quot;IPS (ind)&quot;</span>, <span class="st">&quot;IPS (proj)&quot;</span>, </span>
 <span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>                           <span class="st">&quot;CPBS (e)&quot;</span>, <span class="st">&quot;CBPS (e MQ)&quot;</span>, <span class="st">&quot;CBPS (e MP)&quot;</span>, <span class="st">&quot;CPBS (e P)&quot;</span>, </span>
-<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>                           <span class="st">&quot;CBPS (o)&quot;</span>, <span class="st">&quot;CBPS (o MQ)&quot;</span>, <span class="st">&quot;CBPS (o MP)&quot;</span>, <span class="st">&quot;CPBS (o P)&quot;</span>))) <span class="co">#|&gt;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>                           <span class="st">&quot;CBPS (o)&quot;</span>, <span class="st">&quot;CBPS (o MQ)&quot;</span>, <span class="st">&quot;CBPS (o MP)&quot;</span>, <span class="st">&quot;CPBS (o P)&quot;</span>),</span>
+<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a>                         <span class="fu">c</span>(<span class="st">&quot;IPS (exp)&quot;</span>, <span class="st">&quot;IPS (ind)&quot;</span>, <span class="st">&quot;IPS (proj)&quot;</span>, </span>
+<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a>                           <span class="st">&quot;CBPS (e)&quot;</span>, <span class="st">&quot;DBPS (e MQ)&quot;</span>, <span class="st">&quot;DBPS (e MP)&quot;</span>, <span class="st">&quot;DBPS (e P)&quot;</span>, </span>
+<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a>                           <span class="st">&quot;CBPS (o)&quot;</span>, <span class="st">&quot;DBPS (o MQ)&quot;</span>, <span class="st">&quot;DBPS (o MP)&quot;</span>, <span class="st">&quot;DBPS (o P)&quot;</span>))) <span class="co">#|&gt;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="kable-table">
 <table class="table table-sm table-striped">
@@ -4394,7 +4403,7 @@ vertical-align: -.125em;
 <td style="text-align: right;">3.084386</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;">CPBS (e)</td>
+<td style="text-align: left;">CBPS (e)</td>
 <td style="text-align: right;">0.4014788</td>
 <td style="text-align: right;">0.3658024</td>
 <td style="text-align: right;">2.714072</td>
@@ -4408,42 +4417,42 @@ vertical-align: -.125em;
 <td style="text-align: right;">2.734206</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;">CBPS (e MQ)</td>
+<td style="text-align: left;">DBPS (e MQ)</td>
 <td style="text-align: right;">0.2794656</td>
 <td style="text-align: right;">0.2442205</td>
 <td style="text-align: right;">2.104257</td>
 <td style="text-align: right;">2.054387</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;">CBPS (o MQ)</td>
+<td style="text-align: left;">DBPS (o MQ)</td>
 <td style="text-align: right;">0.2631555</td>
 <td style="text-align: right;">0.2246189</td>
 <td style="text-align: right;">2.063521</td>
 <td style="text-align: right;">2.008532</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;">CBPS (e MP)</td>
+<td style="text-align: left;">DBPS (e MP)</td>
 <td style="text-align: right;">0.3156045</td>
 <td style="text-align: right;">0.2677808</td>
 <td style="text-align: right;">2.068462</td>
 <td style="text-align: right;">1.996108</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;">CBPS (o MP)</td>
+<td style="text-align: left;">DBPS (o MP)</td>
 <td style="text-align: right;">0.2629025</td>
 <td style="text-align: right;">0.2251768</td>
 <td style="text-align: right;">1.993147</td>
 <td style="text-align: right;">1.956149</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;">CPBS (e P)</td>
+<td style="text-align: left;">DBPS (e P)</td>
 <td style="text-align: right;">0.3103047</td>
 <td style="text-align: right;">0.2639396</td>
 <td style="text-align: right;">2.106767</td>
 <td style="text-align: right;">2.063467</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;">CPBS (o P)</td>
+<td style="text-align: left;">DBPS (o P)</td>
 <td style="text-align: right;">0.2648049</td>
 <td style="text-align: right;">0.2230596</td>
 <td style="text-align: right;">1.988189</td>
@@ -4465,7 +4474,7 @@ vertical-align: -.125em;
 <span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">melt</span>(<span class="at">id.vars =</span> <span class="st">&quot;id&quot;</span>) <span class="sc">|&gt;</span> </span>
 <span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>  {\(x) x[, .(<span class="at">cvm_mean=</span><span class="fu">mean</span>(value), <span class="at">cvm_median=</span><span class="fu">median</span>(value)), .(variable)]}() <span class="sc">|&gt;</span> </span>
 <span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">merge</span>(<span class="at">x =</span> _,</span>
-<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>        <span class="at">y =</span> {sim2<span class="sc">$</span>KS <span class="sc">|&gt;</span> </span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>        <span class="at">y =</span> {sim1<span class="sc">$</span>KS <span class="sc">|&gt;</span> </span>
 <span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>                <span class="fu">setDT</span>() <span class="sc">|&gt;</span> </span>
 <span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>                <span class="fu">melt</span>(<span class="at">id.vars =</span> <span class="st">&quot;id&quot;</span>) <span class="sc">|&gt;</span> </span>
 <span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>                {\(x) x[, .(<span class="at">ks_mean=</span><span class="fu">mean</span>(value), <span class="at">ks_median=</span><span class="fu">median</span>(value)), .(variable)]}() },</span>
@@ -4473,7 +4482,10 @@ vertical-align: -.125em;
 <span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transform</span>(<span class="at">variable =</span> <span class="fu">factor</span>(variable,</span>
 <span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>                         <span class="fu">c</span>(<span class="st">&quot;IPS (exp)&quot;</span>, <span class="st">&quot;IPS (ind)&quot;</span>, <span class="st">&quot;IPS (proj)&quot;</span>, </span>
 <span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>                           <span class="st">&quot;CPBS (e)&quot;</span>, <span class="st">&quot;CBPS (e MQ)&quot;</span>, <span class="st">&quot;CBPS (e MP)&quot;</span>, <span class="st">&quot;CPBS (e P)&quot;</span>, </span>
-<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>                           <span class="st">&quot;CBPS (o)&quot;</span>, <span class="st">&quot;CBPS (o MQ)&quot;</span>, <span class="st">&quot;CBPS (o MP)&quot;</span>, <span class="st">&quot;CPBS (o P)&quot;</span>))) <span class="co">#|&gt;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>                           <span class="st">&quot;CBPS (o)&quot;</span>, <span class="st">&quot;CBPS (o MQ)&quot;</span>, <span class="st">&quot;CBPS (o MP)&quot;</span>, <span class="st">&quot;CPBS (o P)&quot;</span>),</span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>                         <span class="fu">c</span>(<span class="st">&quot;IPS (exp)&quot;</span>, <span class="st">&quot;IPS (ind)&quot;</span>, <span class="st">&quot;IPS (proj)&quot;</span>, </span>
+<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a>                           <span class="st">&quot;CBPS (e)&quot;</span>, <span class="st">&quot;DBPS (e MQ)&quot;</span>, <span class="st">&quot;DBPS (e MP)&quot;</span>, <span class="st">&quot;DBPS (e P)&quot;</span>, </span>
+<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a>                           <span class="st">&quot;CBPS (o)&quot;</span>, <span class="st">&quot;DBPS (o MQ)&quot;</span>, <span class="st">&quot;DBPS (o MP)&quot;</span>, <span class="st">&quot;DBPS (o P)&quot;</span>))) <span class="co">#|&gt;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div class="kable-table">
 <table class="table table-sm table-striped">
@@ -4491,85 +4503,85 @@ vertical-align: -.125em;
 <td style="text-align: left;">IPS (ind)</td>
 <td style="text-align: right;">0.1504595</td>
 <td style="text-align: right;">0.1462049</td>
-<td style="text-align: right;">2.291843</td>
-<td style="text-align: right;">2.215846</td>
+<td style="text-align: right;">1.949955</td>
+<td style="text-align: right;">1.892484</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">IPS (exp)</td>
 <td style="text-align: right;">0.2044340</td>
 <td style="text-align: right;">0.1908611</td>
-<td style="text-align: right;">2.611714</td>
-<td style="text-align: right;">2.499083</td>
+<td style="text-align: right;">2.092721</td>
+<td style="text-align: right;">2.015064</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">IPS (proj)</td>
 <td style="text-align: right;">0.2044888</td>
 <td style="text-align: right;">0.1914681</td>
-<td style="text-align: right;">3.329818</td>
-<td style="text-align: right;">3.084386</td>
+<td style="text-align: right;">2.084643</td>
+<td style="text-align: right;">2.024410</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;">CPBS (e)</td>
+<td style="text-align: left;">CBPS (e)</td>
 <td style="text-align: right;">0.2152213</td>
 <td style="text-align: right;">0.2031205</td>
-<td style="text-align: right;">2.714072</td>
-<td style="text-align: right;">2.670370</td>
+<td style="text-align: right;">2.151397</td>
+<td style="text-align: right;">2.096218</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">CBPS (o)</td>
 <td style="text-align: right;">0.2125964</td>
 <td style="text-align: right;">0.1956512</td>
-<td style="text-align: right;">2.777704</td>
-<td style="text-align: right;">2.734206</td>
+<td style="text-align: right;">2.153199</td>
+<td style="text-align: right;">2.079515</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;">CBPS (e MQ)</td>
+<td style="text-align: left;">DBPS (e MQ)</td>
 <td style="text-align: right;">0.1873466</td>
 <td style="text-align: right;">0.1738329</td>
-<td style="text-align: right;">2.104257</td>
-<td style="text-align: right;">2.054387</td>
+<td style="text-align: right;">1.957882</td>
+<td style="text-align: right;">1.922647</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;">CBPS (o MQ)</td>
+<td style="text-align: left;">DBPS (o MQ)</td>
 <td style="text-align: right;">0.1992326</td>
 <td style="text-align: right;">0.1781268</td>
-<td style="text-align: right;">2.063521</td>
-<td style="text-align: right;">2.008532</td>
+<td style="text-align: right;">2.061941</td>
+<td style="text-align: right;">1.976866</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;">CBPS (e MP)</td>
+<td style="text-align: left;">DBPS (e MP)</td>
 <td style="text-align: right;">0.1836849</td>
 <td style="text-align: right;">0.1708436</td>
-<td style="text-align: right;">2.068462</td>
-<td style="text-align: right;">1.996108</td>
+<td style="text-align: right;">1.871789</td>
+<td style="text-align: right;">1.831741</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;">CBPS (o MP)</td>
+<td style="text-align: left;">DBPS (o MP)</td>
 <td style="text-align: right;">0.2247983</td>
 <td style="text-align: right;">0.2067469</td>
-<td style="text-align: right;">1.993147</td>
-<td style="text-align: right;">1.956149</td>
+<td style="text-align: right;">2.181228</td>
+<td style="text-align: right;">2.158453</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;">CPBS (e P)</td>
+<td style="text-align: left;">DBPS (e P)</td>
 <td style="text-align: right;">0.1822637</td>
 <td style="text-align: right;">0.1687717</td>
-<td style="text-align: right;">2.106767</td>
-<td style="text-align: right;">2.063467</td>
+<td style="text-align: right;">1.920147</td>
+<td style="text-align: right;">1.881757</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;">CPBS (o P)</td>
+<td style="text-align: left;">DBPS (o P)</td>
 <td style="text-align: right;">0.2283130</td>
 <td style="text-align: right;">0.2076597</td>
-<td style="text-align: right;">1.988189</td>
-<td style="text-align: right;">1.942606</td>
+<td style="text-align: right;">2.241837</td>
+<td style="text-align: right;">2.223145</td>
 </tr>
 </tbody>
 </table>
 </div>
 </div>
 <div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>  <span class="do">## uncomment for xtable</span></span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># xtable()</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">#xtable()</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Boxplots for highlights</p>
 <p>Simulation 1</p>

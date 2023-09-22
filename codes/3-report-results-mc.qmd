@@ -171,7 +171,7 @@ sim1$ATE |>
   setDT() |> 
   {\(x) x[, .(Bias = mean(value)-10, Var = var(value), RMSE = sqrt( (mean(value)-10)^2 + var(value))), .(est=variable)]}() |> 
   transform(quant = "ATE") |> 
-  rbind(sim2$QTE[, .(Bias = mean(value)-10, Var = var(value), RMSE = sqrt( (mean(value)-10)^2 + var(value))), 
+  rbind(sim1$QTE[, .(Bias = mean(value)-10, Var = var(value), RMSE = sqrt( (mean(value)-10)^2 + var(value))), 
                  .(est, quant = factor(quant, 1:5, c("0.10", "0.25", "0.50", "0.75", "0.90")))] ) |> 
   melt(id.vars = c("est", "quant")) |> 
   transform(quant = factor(quant, 
@@ -210,7 +210,10 @@ sim2$CVM |>
   transform(variable = factor(variable,
                          c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
                            "CPBS (e)", "CBPS (e MQ)", "CBPS (e MP)", "CPBS (e P)", 
-                           "CBPS (o)", "CBPS (o MQ)", "CBPS (o MP)", "CPBS (o P)"))) #|>
+                           "CBPS (o)", "CBPS (o MQ)", "CBPS (o MP)", "CPBS (o P)"),
+                         c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
+                           "CBPS (e)", "DBPS (e MQ)", "DBPS (e MP)", "DBPS (e P)", 
+                           "CBPS (o)", "DBPS (o MQ)", "DBPS (o MP)", "DBPS (o P)"))) #|>
   ## uncomment for xtable
   #xtable() 
 ```
@@ -225,7 +228,7 @@ sim1$CVM |>
   melt(id.vars = "id") |> 
   {\(x) x[, .(cvm_mean=mean(value), cvm_median=median(value)), .(variable)]}() |> 
   merge(x = _,
-        y = {sim2$KS |> 
+        y = {sim1$KS |> 
                 setDT() |> 
                 melt(id.vars = "id") |> 
                 {\(x) x[, .(ks_mean=mean(value), ks_median=median(value)), .(variable)]}() },
@@ -233,9 +236,12 @@ sim1$CVM |>
   transform(variable = factor(variable,
                          c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
                            "CPBS (e)", "CBPS (e MQ)", "CBPS (e MP)", "CPBS (e P)", 
-                           "CBPS (o)", "CBPS (o MQ)", "CBPS (o MP)", "CPBS (o P)"))) #|>
+                           "CBPS (o)", "CBPS (o MQ)", "CBPS (o MP)", "CPBS (o P)"),
+                         c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
+                           "CBPS (e)", "DBPS (e MQ)", "DBPS (e MP)", "DBPS (e P)", 
+                           "CBPS (o)", "DBPS (o MQ)", "DBPS (o MP)", "DBPS (o P)"))) #|>
   ## uncomment for xtable
-  # xtable()
+  #xtable()
 ```
 
 Boxplots for highlights
