@@ -1,7 +1,24 @@
 ---
-title: "Untitled"
-format: html
+title: "Simulation for the entropy balancing method"
+author: "Maciej Beręsewicz"
+format: 
+  html:
+    self-contained: true
+    table-of-contents: true
+    number-sections: true
+    df-print: kable
+editor: source
+execute: 
+  eval: true
+  warning: false
+  message: false
+toc-title: Contents
+lang: en
 ---
+
+# Load packages
+
+Packages and options for `xtable`.
 
 ```{r}
 library(data.table)
@@ -12,7 +29,7 @@ library(glue)
 options(xtable.include.rownames = FALSE)
 ```
 
-# DEB
+# Result for the simulation 1 -- entropy balancing
 
 ```{r}
 sim1_results <- readRDS("../results/sim1-ebal.rds")
@@ -22,18 +39,23 @@ sim1_results[, est_p:=factor(est_p,
                              c("att", "qtt (0.10)", "qtt (0.25)", "qtt (0.50)", "qtt (0.75)", "qtt (0.90)"),
                              c("ATT", "QTT (0.10)", "QTT (0.25)", "QTT (0.50)", "QTT (0.75)", "QTT (0.90)"))]
 sim1_results[, we:=factor(weight, c("w_ebal", "w_mq1", "w_mp1"), c("EB", "DEB MQ", "DEB MD"))]
+```
 
+Table 1
+
+```{r}
 sim1_results[var == "y3", 
              .(Bias = mean(value), Var = var(value), RMSE = sqrt(mean(value)^2 + var(value))),
              .(design, est_p, we)] |> 
   melt(id.vars = c("design", "est_p", "we")) |> 
   dcast(variable + we + design ~ est_p, value.var = "value") |> 
   {\(x) x[order(design, variable, we)]}() |>
-  transform(design = NULL) |> 
-  xtable(digits = 4)
+  ## uncomment for xtable
+  transform(design = NULL) #|>
+  #xtable(digits = 4)
 ```
 
-For appendix
+Table A1 in Appendix
 
 ```{r}
 sim1_results[var == "y1", 
@@ -42,10 +64,12 @@ sim1_results[var == "y1",
   melt(id.vars = c("design", "est_p", "we")) |> 
   dcast(variable + we + design ~ est_p, value.var = "value") |> 
   {\(x) x[order(design, variable, we)]}() |>
-  transform(design = NULL) |> 
-  xtable(digits = 4)
+  ## uncomment for xtable
+  transform(design = NULL) #|> 
+  #xtable(digits = 4)
 ```
 
+Table A2 in the Appendix
 
 ```{r}
 sim1_results[var == "y2", 
@@ -54,12 +78,12 @@ sim1_results[var == "y2",
   melt(id.vars = c("design", "est_p", "we")) |> 
   dcast(variable + we + design ~ est_p, value.var = "value") |> 
   {\(x) x[order(design, variable, we)]}() |>
-  transform(design = NULL) |> 
-  xtable(digits = 4)
+  ## uncomment for xtable
+  transform(design = NULL) #|> 
+  #xtable(digits = 4)
 ```
 
-
-Plot
+Additional plots
 
 ```{r}
 for (des in c("d1", "d2", "d3")) {
@@ -88,15 +112,22 @@ sim1_results |>
   ggplot(data = _, aes(x = est_p, y = value, color = we)) +
   geom_hline(yintercept = 0, linetype = "dashed") + 
   geom_boxplot() +
-  facet_grid(var ~ design, scale = "free_y") 
+  facet_grid(var ~ design, scale = "free_y") +
+  scale_color_brewer(type = "qual", palette = "Set1") +
+  labs(x = "Causal parameter", y = "Value", color = "Method") +
+  theme(axis.text.x = element_text(angle = 45, vjust=1,hjust=1)) -> p1
+
+ggsave(plot = p1, filename = glue("../results/fig-sim-1-ebal-boxplot.png"), width = 7, height = 5)
 ```
 
-# Propensity score
+# Result for the simulation 1 -- Propensity score
 
 ```{r}
 sim1 <- readRDS("../results/sim2-dgp1-1000.rds")
 sim2 <- readRDS("../results/sim2-dgp2-1000.rds")
 ```
+
+Table 2 
 
 ```{r}
 sim2$ATE |> 
@@ -120,11 +151,13 @@ sim2$ATE |>
 
 sim2_results2 |>
   dcast(variable + est ~ quant, value.var = "value") |>
-  subset(select = -variable) |> 
-  xtable(digits = 4) 
+  # uncomment for xtable
+  subset(select = -variable) #|> 
+  #xtable(digits = 4) 
   
 ```
 
+Table A3 in the Appendix
 
 ```{r}
 sim1$ATE |> 
@@ -148,11 +181,12 @@ sim1$ATE |>
 
 sim2_results1 |> 
   dcast(variable + est ~ quant, value.var = "value") |>
-  subset(select = -variable) |> 
-  xtable(digits = 4) 
+  # uncomment for xtable
+  subset(select = -variable) #|> 
+  #xtable(digits = 4) 
   
 ```
-Statistics regarding distributions
+Table 3
 
 ```{r}
 setnames(x = sim2$CVM, old = names(sim2$CVM), new=names(sim2$KS))
@@ -170,10 +204,13 @@ sim2$CVM |>
   transform(variable = factor(variable,
                          c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
                            "CPBS (e)", "CBPS (e MQ)", "CBPS (e MP)", "CPBS (e P)", 
-                           "CBPS (o)", "CBPS (o MQ)", "CBPS (o MP)", "CPBS (o P)"))) |>
-  xtable() |> 
-  print.xtable(include.rownames = F)
+                           "CBPS (o)", "CBPS (o MQ)", "CBPS (o MP)", "CPBS (o P)"))) #|>
+  ## uncomment for xtable
+  #xtable() 
 ```
+
+Table A4 in the Appendix
+
 ```{r}
 setnames(x = sim1$CVM, old = names(sim1$CVM), new=names(sim1$KS))
 
@@ -190,32 +227,10 @@ sim1$CVM |>
   transform(variable = factor(variable,
                          c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
                            "CPBS (e)", "CBPS (e MQ)", "CBPS (e MP)", "CPBS (e P)", 
-                           "CBPS (o)", "CBPS (o MQ)", "CBPS (o MP)", "CPBS (o P)"))) |>
-  xtable() |> 
-  print.xtable(include.rownames = F)
+                           "CBPS (o)", "CBPS (o MQ)", "CBPS (o MP)", "CPBS (o P)"))) #|>
+  ## uncomment for xtable
+  # xtable()
 ```
 
-```{r}
-sim2_results1 |> 
-  #subset(est %in% c("IPS (ind)", "IPS (exp)", "IPS (proj)", "DBPS (e P)", "DBPS (o P)")) |> 
-  #transform(est = factor(est, c("IPS (ind)", "IPS (exp)", "IPS (proj)", "DBPS (e P)", "DBPS (o P)"))) |> 
-      ggplot(data = _, aes(x = est, y = value)) +
-      geom_col(position = "dodge", color = "black") +
-      facet_grid(variable~quant, scales = "free_y") + 
-      #scale_fill_brewer(type = "qual", palette = "Set") +
-      theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1)) +
-      labs(x = "Causal parameter", y = "Values (note different scales)", fill = "Estimator")
-```
 
-```{r}
-sim2_results2 |> 
-  #subset(est %in% c("IPS (ind)", "IPS (exp)", "IPS (proj)", "DBPS (e P)", "DBPS (o P)")) |> 
-  #transform(est = factor(est, c("IPS (ind)", "IPS (exp)", "IPS (proj)", "DBPS (e P)", "DBPS (o P)"))) |> 
-      ggplot(data = _, aes(x = est, y = value)) +
-      geom_col(position = "dodge", color = "black") +
-      facet_grid(variable~quant, scales = "free_y") + 
-      #scale_fill_brewer(type = "qual", palette = "Set") +
-      theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1)) +
-      labs(x = "Causal parameter", y = "Values (note different scales)", fill = "Estimator")
-```
 

@@ -2609,7 +2609,8 @@ vertical-align: -.125em;
    
   <ul>
   <li><a href="#load-packages" id="toc-load-packages" class="nav-link active" data-scroll-target="#load-packages"><span class="toc-section-number">1</span>  Load packages</a></li>
-  <li><a href="#simulation-from-the-paper" id="toc-simulation-from-the-paper" class="nav-link" data-scroll-target="#simulation-from-the-paper"><span class="toc-section-number">2</span>  Simulation from the paper</a></li>
+  <li><a href="#result-for-the-simulation-1-entropy-balancing" id="toc-result-for-the-simulation-1-entropy-balancing" class="nav-link" data-scroll-target="#result-for-the-simulation-1-entropy-balancing"><span class="toc-section-number">2</span>  Result for the simulation 1 – entropy balancing</a></li>
+  <li><a href="#result-for-the-simulation-1-propensity-score" id="toc-result-for-the-simulation-1-propensity-score" class="nav-link" data-scroll-target="#result-for-the-simulation-1-propensity-score"><span class="toc-section-number">3</span>  Result for the simulation 1 – Propensity score</a></li>
   </ul>
 </nav>
 </div>
@@ -2640,143 +2641,1935 @@ vertical-align: -.125em;
 
 <section id="load-packages" class="level1" data-number="1">
 <h1 data-number="1"><span class="header-section-number">1</span> Load packages</h1>
-<p>Load required packages</p>
+<p>Packages and options for <code>xtable</code>.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(jointCalib)</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ebal)</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(mvnfast)</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(data.table)</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(laeken)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(data.table)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(xtable)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(stringr)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(glue)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">xtable.include.rownames =</span> <span class="cn">FALSE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
-<section id="simulation-from-the-paper" class="level1" data-number="2">
-<h1 data-number="2"><span class="header-section-number">2</span> Simulation from the paper</h1>
-<p>Generate data as described in the section 4.</p>
+<section id="result-for-the-simulation-1-entropy-balancing" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Result for the simulation 1 – entropy balancing</h1>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>n <span class="ot">&lt;-</span> <span class="dv">2000</span> <span class="do">## initial sample size</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>n_sample <span class="ot">&lt;-</span> <span class="dv">1000</span> <span class="do">## required sample size n_0=n_1=n (#n control = #n treatment)</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>mu <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>) </span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>Sigma <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">c</span>(<span class="dv">2</span>, <span class="dv">1</span>, <span class="sc">-</span><span class="dv">1</span>,</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>                  <span class="dv">1</span>, <span class="dv">1</span>, <span class="sc">-</span><span class="fl">0.5</span>,</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>                  <span class="sc">-</span><span class="dv">1</span>,<span class="sc">-</span><span class="fl">0.5</span>, <span class="dv">1</span>), </span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>                <span class="at">nrow=</span><span class="dv">3</span>, </span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>                <span class="at">ncol=</span><span class="dv">3</span>)</span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>B <span class="ot">&lt;-</span> <span class="dv">500</span></span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>tau <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fl">0.10</span>, <span class="fl">0.25</span>, <span class="fl">0.5</span>, <span class="fl">0.75</span>, <span class="fl">0.9</span>)</span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>result_total <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (b <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>B) {</span>
-<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">set.seed</span>(b)</span>
-<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (b <span class="sc">%%</span> <span class="dv">50</span> <span class="sc">==</span> <span class="dv">0</span>) <span class="fu">print</span>(b)</span>
-<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>  x123 <span class="ot">&lt;-</span> <span class="fu">rmvn</span>(<span class="at">n=</span>n, <span class="at">mu=</span>mu, <span class="at">sigma=</span>Sigma)</span>
-<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>  x1 <span class="ot">&lt;-</span> x123[,<span class="dv">1</span>]</span>
-<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>  x2 <span class="ot">&lt;-</span> x123[,<span class="dv">2</span>]</span>
-<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>  x3 <span class="ot">&lt;-</span> x123[,<span class="dv">3</span>]</span>
-<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>  x4 <span class="ot">&lt;-</span> <span class="fu">runif</span>(n,<span class="sc">-</span><span class="dv">3</span>,<span class="dv">3</span>)</span>
-<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>  x5 <span class="ot">&lt;-</span> <span class="fu">rchisq</span>(n,<span class="dv">1</span>)</span>
-<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>  x6 <span class="ot">&lt;-</span> <span class="fu">rbinom</span>(n,<span class="dv">1</span>,<span class="fl">0.5</span>)</span>
-<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>  ep1 <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(n,<span class="dv">0</span>,<span class="dv">30</span>)</span>
-<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>  ep2 <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(n,<span class="dv">0</span>,<span class="dv">100</span>)</span>
-<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>  ep3 <span class="ot">&lt;-</span> <span class="fu">rchisq</span>(n, <span class="dv">5</span>)</span>
-<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>  ep3 <span class="ot">&lt;-</span> ((ep3 <span class="sc">-</span> <span class="fu">mean</span>(ep3)) <span class="sc">/</span> <span class="fu">sd</span>(ep3)) <span class="sc">*</span> <span class="fu">sqrt</span>(<span class="fl">67.6</span>) <span class="sc">+</span> <span class="fl">0.5</span></span>
-<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>  d1 <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>((x1 <span class="sc">+</span> <span class="dv">2</span><span class="sc">*</span>x2 <span class="sc">-</span><span class="dv">2</span><span class="sc">*</span>x3 <span class="sc">-</span>x4 <span class="sc">-</span><span class="fl">0.5</span><span class="sc">*</span>x5 <span class="sc">+</span>x6 <span class="sc">+</span> ep1) <span class="sc">&gt;</span> <span class="dv">0</span>)</span>
-<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>  d2 <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>((x1 <span class="sc">+</span> <span class="dv">2</span><span class="sc">*</span>x2 <span class="sc">-</span><span class="dv">2</span><span class="sc">*</span>x3 <span class="sc">-</span>x4 <span class="sc">-</span><span class="fl">0.5</span><span class="sc">*</span>x5 <span class="sc">+</span>x6 <span class="sc">+</span> ep2) <span class="sc">&gt;</span> <span class="dv">0</span>)</span>
-<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>  d3 <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>((x1 <span class="sc">+</span> <span class="dv">2</span><span class="sc">*</span>x2 <span class="sc">-</span><span class="dv">2</span><span class="sc">*</span>x3 <span class="sc">-</span>x4 <span class="sc">-</span><span class="fl">0.5</span><span class="sc">*</span>x5 <span class="sc">+</span>x6 <span class="sc">+</span> ep3) <span class="sc">&gt;</span> <span class="dv">0</span>)</span>
-<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>  eta <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(n)</span>
-<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>  y1 <span class="ot">&lt;-</span> x1 <span class="sc">+</span> x2 <span class="sc">+</span> x3 <span class="sc">-</span> x4 <span class="sc">+</span> x5 <span class="sc">+</span> x6 <span class="sc">+</span> eta</span>
-<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>  y2 <span class="ot">&lt;-</span> x1 <span class="sc">+</span> x2 <span class="sc">+</span> <span class="fl">0.2</span><span class="sc">*</span>x3<span class="sc">*</span>x4 <span class="sc">-</span> <span class="fu">sqrt</span>(x5) <span class="sc">+</span> eta</span>
-<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>  y3 <span class="ot">&lt;-</span> (x1 <span class="sc">+</span> x2 <span class="sc">+</span> x5)<span class="sc">^</span><span class="dv">2</span> <span class="sc">+</span> eta</span>
-<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>  df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">id =</span><span class="dv">1</span><span class="sc">:</span>n, x1,x2,x3,x4,x5,x6,d1,d2,d3,y1,y2,y3) <span class="sc">|&gt;</span> <span class="fu">setDT</span>()</span>
-<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>  df_long <span class="ot">&lt;-</span> <span class="fu">melt</span>(df, <span class="at">id.vars =</span> <span class="fu">c</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">7</span>,<span class="dv">11</span><span class="sc">:</span><span class="dv">13</span>), <span class="at">value.name =</span> <span class="st">&quot;treatment&quot;</span>, <span class="at">variable.name =</span> <span class="st">&quot;design&quot;</span>)</span>
-<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>  <span class="do">## sample by 1000 from reach group</span></span>
-<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a>  df_long <span class="ot">&lt;-</span> df_long[, .SD[<span class="fu">sample</span>(.N, n_sample, <span class="at">replace =</span> T)], by <span class="ot">=</span> .(design, treatment)]</span>
-<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>  y_results <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
-<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (des <span class="cf">in</span> <span class="fu">c</span>(<span class="st">&quot;d1&quot;</span>, <span class="st">&quot;d2&quot;</span>, <span class="st">&quot;d3&quot;</span>)) {</span>
-<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a>    df_long_des <span class="ot">&lt;-</span> df_long[design <span class="sc">==</span> des]</span>
-<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a>    ebal_res <span class="ot">&lt;-</span> <span class="fu">ebalance</span>(<span class="at">Treatment =</span> df_long_des<span class="sc">$</span>treatment, </span>
-<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a>                         <span class="at">X =</span> <span class="fu">model.matrix</span>( <span class="sc">~</span> <span class="sc">-</span><span class="dv">1</span> <span class="sc">+</span> x1 <span class="sc">+</span> x2 <span class="sc">+</span> x3 <span class="sc">+</span> x4 <span class="sc">+</span> x5 <span class="sc">+</span> x6, df_long_des), </span>
-<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a>                         <span class="at">print.level =</span> <span class="sc">-</span><span class="dv">1</span>)</span>
-<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a>    mq1_res <span class="ot">&lt;-</span> <span class="fu">joint_calib_att</span>(<span class="at">formula_means =</span> <span class="sc">~</span> x1 <span class="sc">+</span> x2 <span class="sc">+</span> x3 <span class="sc">+</span> x4 <span class="sc">+</span> x5 <span class="sc">+</span> x6,</span>
-<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a>                               <span class="at">formula_quantiles =</span> <span class="sc">~</span> x1 <span class="sc">+</span> x2 <span class="sc">+</span> x3 <span class="sc">+</span> x4 <span class="sc">+</span> x5,</span>
-<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a>                               <span class="at">treatment =</span> <span class="sc">~</span> treatment,</span>
-<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a>                               <span class="at">data =</span> <span class="fu">as.data.frame</span>(df_long_des),</span>
-<span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a>                               <span class="at">method =</span> <span class="st">&quot;eb&quot;</span>)</span>
-<span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a>    mp1_res <span class="ot">&lt;-</span> <span class="fu">joint_calib_att</span>(<span class="at">formula_means =</span> <span class="sc">~</span> x1 <span class="sc">+</span> x2 <span class="sc">+</span> x3 <span class="sc">+</span> x4 <span class="sc">+</span> x5 <span class="sc">+</span> x6,</span>
-<span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a>                               <span class="at">formula_quantiles =</span> <span class="sc">~</span> x1 <span class="sc">+</span> x2 <span class="sc">+</span> x3 <span class="sc">+</span> x4 <span class="sc">+</span> x5,</span>
-<span id="cb2-54"><a href="#cb2-54" aria-hidden="true" tabindex="-1"></a>                               <span class="at">treatment =</span> <span class="sc">~</span> treatment,</span>
-<span id="cb2-55"><a href="#cb2-55" aria-hidden="true" tabindex="-1"></a>                               <span class="at">data =</span> <span class="fu">as.data.frame</span>(df_long_des),</span>
-<span id="cb2-56"><a href="#cb2-56" aria-hidden="true" tabindex="-1"></a>                               <span class="at">probs =</span> <span class="fu">seq</span>(<span class="fl">0.1</span>, <span class="fl">0.9</span>, <span class="fl">0.1</span>),</span>
-<span id="cb2-57"><a href="#cb2-57" aria-hidden="true" tabindex="-1"></a>                               <span class="at">method =</span> <span class="st">&quot;eb&quot;</span>) </span>
-<span id="cb2-58"><a href="#cb2-58" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb2-59"><a href="#cb2-59" aria-hidden="true" tabindex="-1"></a>    df_long_des[treatment <span class="sc">==</span> <span class="dv">0</span>, <span class="st">&quot;:=&quot;</span>(<span class="at">w_ebal=</span>ebal_res<span class="sc">$</span>w, <span class="at">w_mq1=</span>mq1_res<span class="sc">$</span>g, <span class="at">w_mp1=</span>mp1_res<span class="sc">$</span>g)]</span>
-<span id="cb2-60"><a href="#cb2-60" aria-hidden="true" tabindex="-1"></a>    df_long_des[treatment <span class="sc">==</span> <span class="dv">1</span>, <span class="st">&quot;:=&quot;</span>(<span class="at">w_ebal=</span><span class="dv">1</span>,          <span class="at">w_mq1=</span><span class="dv">1</span>,         <span class="at">w_mp1=</span><span class="dv">1</span>)]</span>
-<span id="cb2-61"><a href="#cb2-61" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb2-62"><a href="#cb2-62" aria-hidden="true" tabindex="-1"></a>    y1_res <span class="ot">&lt;-</span> df_long_des[, <span class="fu">lapply</span>(.SD, </span>
-<span id="cb2-63"><a href="#cb2-63" aria-hidden="true" tabindex="-1"></a>                          <span class="at">FUN =</span> <span class="cf">function</span>(x) <span class="fu">weighted.mean</span>(y1[treatment<span class="sc">==</span><span class="dv">1</span>], x[treatment<span class="sc">==</span><span class="dv">1</span>]) <span class="sc">-</span> <span class="fu">weighted.mean</span>(y1[treatment<span class="sc">==</span><span class="dv">0</span>], x[treatment<span class="sc">==</span><span class="dv">0</span>])), </span>
-<span id="cb2-64"><a href="#cb2-64" aria-hidden="true" tabindex="-1"></a>                         .SDcols <span class="ot">=</span> <span class="fu">patterns</span>(<span class="st">&quot;w_&quot;</span>)][, <span class="st">&quot;:=&quot;</span>(<span class="at">var=</span><span class="st">&quot;y1&quot;</span>, <span class="at">est=</span><span class="st">&quot;att&quot;</span>, <span class="at">tau=</span><span class="cn">NA</span>)]</span>
-<span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a>    y2_res <span class="ot">&lt;-</span> df_long_des[, <span class="fu">lapply</span>(.SD, </span>
-<span id="cb2-66"><a href="#cb2-66" aria-hidden="true" tabindex="-1"></a>                          <span class="at">FUN =</span> <span class="cf">function</span>(x) <span class="fu">weighted.mean</span>(y2[treatment<span class="sc">==</span><span class="dv">1</span>], x[treatment<span class="sc">==</span><span class="dv">1</span>]) <span class="sc">-</span> <span class="fu">weighted.mean</span>(y2[treatment<span class="sc">==</span><span class="dv">0</span>], x[treatment<span class="sc">==</span><span class="dv">0</span>])), </span>
-<span id="cb2-67"><a href="#cb2-67" aria-hidden="true" tabindex="-1"></a>                         .SDcols <span class="ot">=</span> <span class="fu">patterns</span>(<span class="st">&quot;w_&quot;</span>)][, <span class="st">&quot;:=&quot;</span>(<span class="at">var=</span><span class="st">&quot;y2&quot;</span>, <span class="at">est=</span><span class="st">&quot;att&quot;</span>, <span class="at">tau=</span><span class="cn">NA</span>)]</span>
-<span id="cb2-68"><a href="#cb2-68" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb2-69"><a href="#cb2-69" aria-hidden="true" tabindex="-1"></a>    y3_res <span class="ot">&lt;-</span> df_long_des[, <span class="fu">lapply</span>(.SD, </span>
-<span id="cb2-70"><a href="#cb2-70" aria-hidden="true" tabindex="-1"></a>                          <span class="at">FUN =</span> <span class="cf">function</span>(x) <span class="fu">weighted.mean</span>(y3[treatment<span class="sc">==</span><span class="dv">1</span>], x[treatment<span class="sc">==</span><span class="dv">1</span>]) <span class="sc">-</span> <span class="fu">weighted.mean</span>(y3[treatment<span class="sc">==</span><span class="dv">0</span>], x[treatment<span class="sc">==</span><span class="dv">0</span>])), </span>
-<span id="cb2-71"><a href="#cb2-71" aria-hidden="true" tabindex="-1"></a>                         .SDcols <span class="ot">=</span> <span class="fu">patterns</span>(<span class="st">&quot;w_&quot;</span>)][, <span class="st">&quot;:=&quot;</span>(<span class="at">var=</span><span class="st">&quot;y3&quot;</span>, <span class="at">est=</span><span class="st">&quot;att&quot;</span>, <span class="at">tau=</span><span class="cn">NA</span>)]</span>
-<span id="cb2-72"><a href="#cb2-72" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb2-73"><a href="#cb2-73" aria-hidden="true" tabindex="-1"></a>    y1_res_q <span class="ot">&lt;-</span> df_long_des[, <span class="fu">lapply</span>(.SD, </span>
-<span id="cb2-74"><a href="#cb2-74" aria-hidden="true" tabindex="-1"></a>                          <span class="at">FUN =</span> <span class="cf">function</span>(x) <span class="fu">weightedQuantile</span>(y1[treatment<span class="sc">==</span><span class="dv">1</span>], x[treatment<span class="sc">==</span><span class="dv">1</span>], tau) <span class="sc">-</span> </span>
-<span id="cb2-75"><a href="#cb2-75" aria-hidden="true" tabindex="-1"></a>                                            <span class="fu">weightedQuantile</span>(y1[treatment<span class="sc">==</span><span class="dv">0</span>], x[treatment<span class="sc">==</span><span class="dv">0</span>],tau)), </span>
-<span id="cb2-76"><a href="#cb2-76" aria-hidden="true" tabindex="-1"></a>                         .SDcols <span class="ot">=</span> <span class="fu">patterns</span>(<span class="st">&quot;w_&quot;</span>)][, <span class="st">&quot;:=&quot;</span>(<span class="at">var=</span><span class="st">&quot;y1&quot;</span>, <span class="at">est=</span><span class="st">&quot;qtt&quot;</span>, <span class="at">tau=</span>tau)]</span>
-<span id="cb2-77"><a href="#cb2-77" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb2-78"><a href="#cb2-78" aria-hidden="true" tabindex="-1"></a>    y2_res_q <span class="ot">&lt;-</span> df_long_des[, <span class="fu">lapply</span>(.SD, </span>
-<span id="cb2-79"><a href="#cb2-79" aria-hidden="true" tabindex="-1"></a>                          <span class="at">FUN =</span> <span class="cf">function</span>(x) <span class="fu">weightedQuantile</span>(y2[treatment<span class="sc">==</span><span class="dv">1</span>], x[treatment<span class="sc">==</span><span class="dv">1</span>], tau) <span class="sc">-</span> </span>
-<span id="cb2-80"><a href="#cb2-80" aria-hidden="true" tabindex="-1"></a>                                            <span class="fu">weightedQuantile</span>(y2[treatment<span class="sc">==</span><span class="dv">0</span>], x[treatment<span class="sc">==</span><span class="dv">0</span>],tau)), </span>
-<span id="cb2-81"><a href="#cb2-81" aria-hidden="true" tabindex="-1"></a>                         .SDcols <span class="ot">=</span> <span class="fu">patterns</span>(<span class="st">&quot;w_&quot;</span>)][, <span class="st">&quot;:=&quot;</span>(<span class="at">var=</span><span class="st">&quot;y2&quot;</span>, <span class="at">est=</span><span class="st">&quot;qtt&quot;</span>, <span class="at">tau=</span>tau)]</span>
-<span id="cb2-82"><a href="#cb2-82" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb2-83"><a href="#cb2-83" aria-hidden="true" tabindex="-1"></a>    y3_res_q <span class="ot">&lt;-</span> df_long_des[, <span class="fu">lapply</span>(.SD, </span>
-<span id="cb2-84"><a href="#cb2-84" aria-hidden="true" tabindex="-1"></a>                          <span class="at">FUN =</span> <span class="cf">function</span>(x) <span class="fu">weightedQuantile</span>(y3[treatment<span class="sc">==</span><span class="dv">1</span>], x[treatment<span class="sc">==</span><span class="dv">1</span>], tau) <span class="sc">-</span> </span>
-<span id="cb2-85"><a href="#cb2-85" aria-hidden="true" tabindex="-1"></a>                                            <span class="fu">weightedQuantile</span>(y3[treatment<span class="sc">==</span><span class="dv">0</span>], x[treatment<span class="sc">==</span><span class="dv">0</span>],tau)), </span>
-<span id="cb2-86"><a href="#cb2-86" aria-hidden="true" tabindex="-1"></a>                         .SDcols <span class="ot">=</span> <span class="fu">patterns</span>(<span class="st">&quot;w_&quot;</span>)][, <span class="st">&quot;:=&quot;</span>(<span class="at">var=</span><span class="st">&quot;y3&quot;</span>, <span class="at">est=</span><span class="st">&quot;qtt&quot;</span>, <span class="at">tau=</span>tau)]</span>
-<span id="cb2-87"><a href="#cb2-87" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-88"><a href="#cb2-88" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb2-89"><a href="#cb2-89" aria-hidden="true" tabindex="-1"></a>    y_results[[des]] <span class="ot">&lt;-</span> <span class="fu">rbind</span>(y1_res,y2_res,y3_res, y1_res_q, y2_res_q, y3_res_q)</span>
-<span id="cb2-90"><a href="#cb2-90" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-91"><a href="#cb2-91" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb2-92"><a href="#cb2-92" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-93"><a href="#cb2-93" aria-hidden="true" tabindex="-1"></a>  result_total[[b]] <span class="ot">&lt;-</span> <span class="fu">rbindlist</span>(y_results, <span class="at">idcol =</span> <span class="st">&quot;design&quot;</span>)</span>
-<span id="cb2-94"><a href="#cb2-94" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb2-95"><a href="#cb2-95" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>sim1_results <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">&quot;../results/sim1-ebal.rds&quot;</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>sim1_results[<span class="fu">is.na</span>(tau), est_p <span class="sc">:</span><span class="er">=</span> est]</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>sim1_results[<span class="sc">!</span><span class="fu">is.na</span>(tau), est_p <span class="sc">:</span><span class="er">=</span> <span class="fu">paste0</span>(est, <span class="st">&quot; (&quot;</span>, <span class="fu">str_pad</span>(tau,<span class="dv">4</span>,<span class="st">&quot;right&quot;</span>, <span class="st">&quot;0&quot;</span>), <span class="st">&quot;)&quot;</span>)]</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>sim1_results[, est_p<span class="sc">:</span><span class="er">=</span><span class="fu">factor</span>(est_p, </span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>                             <span class="fu">c</span>(<span class="st">&quot;att&quot;</span>, <span class="st">&quot;qtt (0.10)&quot;</span>, <span class="st">&quot;qtt (0.25)&quot;</span>, <span class="st">&quot;qtt (0.50)&quot;</span>, <span class="st">&quot;qtt (0.75)&quot;</span>, <span class="st">&quot;qtt (0.90)&quot;</span>),</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>                             <span class="fu">c</span>(<span class="st">&quot;ATT&quot;</span>, <span class="st">&quot;QTT (0.10)&quot;</span>, <span class="st">&quot;QTT (0.25)&quot;</span>, <span class="st">&quot;QTT (0.50)&quot;</span>, <span class="st">&quot;QTT (0.75)&quot;</span>, <span class="st">&quot;QTT (0.90)&quot;</span>))]</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>sim1_results[, we<span class="sc">:</span><span class="er">=</span><span class="fu">factor</span>(weight, <span class="fu">c</span>(<span class="st">&quot;w_ebal&quot;</span>, <span class="st">&quot;w_mq1&quot;</span>, <span class="st">&quot;w_mp1&quot;</span>), <span class="fu">c</span>(<span class="st">&quot;EB&quot;</span>, <span class="st">&quot;DEB MQ&quot;</span>, <span class="st">&quot;DEB MD&quot;</span>))]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>Process data and save to <code>result_total_df</code> data.frame with names:</p>
-<ul>
-<li><code>b</code> - MC sample</li>
-<li><code>design</code> - design: d1, d2, d3</li>
-<li><code>var</code> - target: y1, y2, y3</li>
-<li><code>est</code> - causal parameter: att, qtt</li>
-<li><code>tau</code> - quantile: 0.1, 0.25, 0.50, 0.75, 0.90</li>
-<li><code>weight</code> - weight based on method: w_ebal, w_mq1, w_mp1</li>
-<li><code>value</code> - estimator value</li>
-</ul>
+<p>Table 1</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>result_total_df <span class="ot">&lt;-</span> <span class="fu">rbindlist</span>(result_total, <span class="at">idcol =</span> <span class="st">&quot;b&quot;</span>) <span class="sc">|&gt;</span> </span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">melt</span>(<span class="at">id.vars =</span> <span class="fu">c</span>(<span class="st">&quot;b&quot;</span>, </span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>                   <span class="st">&quot;design&quot;</span>, </span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>                   <span class="st">&quot;var&quot;</span>, </span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>                   <span class="st">&quot;est&quot;</span>, </span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>                   <span class="st">&quot;tau&quot;</span>), </span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>       <span class="at">variable.name =</span> <span class="st">&quot;weight&quot;</span>, <span class="at">value.name =</span> <span class="st">&quot;value&quot;</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>sim1_results[var <span class="sc">==</span> <span class="st">&quot;y3&quot;</span>, </span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>             .(<span class="at">Bias =</span> <span class="fu">mean</span>(value), <span class="at">Var =</span> <span class="fu">var</span>(value), <span class="at">RMSE =</span> <span class="fu">sqrt</span>(<span class="fu">mean</span>(value)<span class="sc">^</span><span class="dv">2</span> <span class="sc">+</span> <span class="fu">var</span>(value))),</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>             .(design, est_p, we)] <span class="sc">|&gt;</span> </span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">melt</span>(<span class="at">id.vars =</span> <span class="fu">c</span>(<span class="st">&quot;design&quot;</span>, <span class="st">&quot;est_p&quot;</span>, <span class="st">&quot;we&quot;</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">dcast</span>(variable <span class="sc">+</span> we <span class="sc">+</span> design <span class="sc">~</span> est_p, <span class="at">value.var =</span> <span class="st">&quot;value&quot;</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  {\(x) x[<span class="fu">order</span>(design, variable, we)]}() <span class="sc">|&gt;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="do">## uncomment for xtable</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transform</span>(<span class="at">design =</span> <span class="cn">NULL</span>) <span class="co">#|&gt;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="kable-table">
+<table class="table table-sm table-striped">
+<colgroup>
+<col style="width: 11%">
+<col style="width: 8%">
+<col style="width: 12%">
+<col style="width: 13%">
+<col style="width: 13%">
+<col style="width: 13%">
+<col style="width: 13%">
+<col style="width: 13%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">variable</th>
+<th style="text-align: left;">we</th>
+<th style="text-align: right;">ATT</th>
+<th style="text-align: right;">QTT (0.10)</th>
+<th style="text-align: right;">QTT (0.25)</th>
+<th style="text-align: right;">QTT (0.50)</th>
+<th style="text-align: right;">QTT (0.75)</th>
+<th style="text-align: right;">QTT (0.90)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Bias</td>
+<td style="text-align: left;">EB</td>
+<td style="text-align: right;">0.0043642</td>
+<td style="text-align: right;">0.0068211</td>
+<td style="text-align: right;">0.0003899</td>
+<td style="text-align: right;">-0.0030781</td>
+<td style="text-align: right;">-0.0215506</td>
+<td style="text-align: right;">0.0854561</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Bias</td>
+<td style="text-align: left;">DEB MQ</td>
+<td style="text-align: right;">0.0140756</td>
+<td style="text-align: right;">0.0071597</td>
+<td style="text-align: right;">0.0038647</td>
+<td style="text-align: right;">-0.0021271</td>
+<td style="text-align: right;">-0.0532004</td>
+<td style="text-align: right;">0.0688785</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Bias</td>
+<td style="text-align: left;">DEB MD</td>
+<td style="text-align: right;">0.0097969</td>
+<td style="text-align: right;">0.0109134</td>
+<td style="text-align: right;">0.0090118</td>
+<td style="text-align: right;">0.0051880</td>
+<td style="text-align: right;">-0.0345194</td>
+<td style="text-align: right;">0.1074178</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Var</td>
+<td style="text-align: left;">EB</td>
+<td style="text-align: right;">0.4737329</td>
+<td style="text-align: right;">0.0260005</td>
+<td style="text-align: right;">0.0366369</td>
+<td style="text-align: right;">0.1839120</td>
+<td style="text-align: right;">1.1611696</td>
+<td style="text-align: right;">6.5251587</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Var</td>
+<td style="text-align: left;">DEB MQ</td>
+<td style="text-align: right;">0.2998994</td>
+<td style="text-align: right;">0.0250283</td>
+<td style="text-align: right;">0.0314140</td>
+<td style="text-align: right;">0.1326217</td>
+<td style="text-align: right;">0.9446571</td>
+<td style="text-align: right;">5.9581294</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Var</td>
+<td style="text-align: left;">DEB MD</td>
+<td style="text-align: right;">0.2512942</td>
+<td style="text-align: right;">0.0264170</td>
+<td style="text-align: right;">0.0330168</td>
+<td style="text-align: right;">0.1232695</td>
+<td style="text-align: right;">0.8676534</td>
+<td style="text-align: right;">5.7197185</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">RMSE</td>
+<td style="text-align: left;">EB</td>
+<td style="text-align: right;">0.6882964</td>
+<td style="text-align: right;">0.1613910</td>
+<td style="text-align: right;">0.1914081</td>
+<td style="text-align: right;">0.4288606</td>
+<td style="text-align: right;">1.0777913</td>
+<td style="text-align: right;">2.5558680</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">RMSE</td>
+<td style="text-align: left;">DEB MQ</td>
+<td style="text-align: right;">0.5478116</td>
+<td style="text-align: right;">0.1583652</td>
+<td style="text-align: right;">0.1772821</td>
+<td style="text-align: right;">0.3641788</td>
+<td style="text-align: right;">0.9733896</td>
+<td style="text-align: right;">2.4418996</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">RMSE</td>
+<td style="text-align: left;">DEB MD</td>
+<td style="text-align: right;">0.5013883</td>
+<td style="text-align: right;">0.1628991</td>
+<td style="text-align: right;">0.1819286</td>
+<td style="text-align: right;">0.3511359</td>
+<td style="text-align: right;">0.9321185</td>
+<td style="text-align: right;">2.3940044</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Bias</td>
+<td style="text-align: left;">EB</td>
+<td style="text-align: right;">0.0017704</td>
+<td style="text-align: right;">-0.0069302</td>
+<td style="text-align: right;">-0.0040426</td>
+<td style="text-align: right;">-0.0123763</td>
+<td style="text-align: right;">-0.0039376</td>
+<td style="text-align: right;">0.0617895</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Bias</td>
+<td style="text-align: left;">DEB MQ</td>
+<td style="text-align: right;">0.0005972</td>
+<td style="text-align: right;">-0.0056944</td>
+<td style="text-align: right;">-0.0035053</td>
+<td style="text-align: right;">-0.0079631</td>
+<td style="text-align: right;">-0.0325565</td>
+<td style="text-align: right;">0.0334088</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Bias</td>
+<td style="text-align: left;">DEB MD</td>
+<td style="text-align: right;">0.0041277</td>
+<td style="text-align: right;">-0.0029031</td>
+<td style="text-align: right;">0.0001833</td>
+<td style="text-align: right;">0.0025303</td>
+<td style="text-align: right;">-0.0182376</td>
+<td style="text-align: right;">0.0254266</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Var</td>
+<td style="text-align: left;">EB</td>
+<td style="text-align: right;">0.5034702</td>
+<td style="text-align: right;">0.0277861</td>
+<td style="text-align: right;">0.0355218</td>
+<td style="text-align: right;">0.2110343</td>
+<td style="text-align: right;">1.0354194</td>
+<td style="text-align: right;">4.8602319</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Var</td>
+<td style="text-align: left;">DEB MQ</td>
+<td style="text-align: right;">0.3527049</td>
+<td style="text-align: right;">0.0252891</td>
+<td style="text-align: right;">0.0282359</td>
+<td style="text-align: right;">0.1319756</td>
+<td style="text-align: right;">0.8260581</td>
+<td style="text-align: right;">4.6519848</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Var</td>
+<td style="text-align: left;">DEB MD</td>
+<td style="text-align: right;">0.2513701</td>
+<td style="text-align: right;">0.0265323</td>
+<td style="text-align: right;">0.0288513</td>
+<td style="text-align: right;">0.1221887</td>
+<td style="text-align: right;">0.6689908</td>
+<td style="text-align: right;">4.2490425</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">RMSE</td>
+<td style="text-align: left;">EB</td>
+<td style="text-align: right;">0.7095585</td>
+<td style="text-align: right;">0.1668358</td>
+<td style="text-align: right;">0.1885157</td>
+<td style="text-align: right;">0.4595513</td>
+<td style="text-align: right;">1.0175632</td>
+<td style="text-align: right;">2.2054591</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">RMSE</td>
+<td style="text-align: left;">DEB MQ</td>
+<td style="text-align: right;">0.5938899</td>
+<td style="text-align: right;">0.1591273</td>
+<td style="text-align: right;">0.1680720</td>
+<td style="text-align: right;">0.3633717</td>
+<td style="text-align: right;">0.9094603</td>
+<td style="text-align: right;">2.1571048</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">RMSE</td>
+<td style="text-align: left;">DEB MD</td>
+<td style="text-align: right;">0.5013852</td>
+<td style="text-align: right;">0.1629131</td>
+<td style="text-align: right;">0.1698569</td>
+<td style="text-align: right;">0.3495642</td>
+<td style="text-align: right;">0.8181219</td>
+<td style="text-align: right;">2.0614774</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Bias</td>
+<td style="text-align: left;">EB</td>
+<td style="text-align: right;">1.1900584</td>
+<td style="text-align: right;">0.0429799</td>
+<td style="text-align: right;">0.0976688</td>
+<td style="text-align: right;">0.4504930</td>
+<td style="text-align: right;">1.7150060</td>
+<td style="text-align: right;">3.6745381</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Bias</td>
+<td style="text-align: left;">DEB MQ</td>
+<td style="text-align: right;">0.6893138</td>
+<td style="text-align: right;">0.0447438</td>
+<td style="text-align: right;">0.0861254</td>
+<td style="text-align: right;">0.2745594</td>
+<td style="text-align: right;">0.8790194</td>
+<td style="text-align: right;">2.1801340</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Bias</td>
+<td style="text-align: left;">DEB MD</td>
+<td style="text-align: right;">0.2402150</td>
+<td style="text-align: right;">0.0270298</td>
+<td style="text-align: right;">0.0416263</td>
+<td style="text-align: right;">0.1143546</td>
+<td style="text-align: right;">0.3347300</td>
+<td style="text-align: right;">0.8293560</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Var</td>
+<td style="text-align: left;">EB</td>
+<td style="text-align: right;">0.5372597</td>
+<td style="text-align: right;">0.0355178</td>
+<td style="text-align: right;">0.0447288</td>
+<td style="text-align: right;">0.2678800</td>
+<td style="text-align: right;">1.7579377</td>
+<td style="text-align: right;">12.6889700</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Var</td>
+<td style="text-align: left;">DEB MQ</td>
+<td style="text-align: right;">0.4964847</td>
+<td style="text-align: right;">0.0357439</td>
+<td style="text-align: right;">0.0437364</td>
+<td style="text-align: right;">0.2719015</td>
+<td style="text-align: right;">1.9107037</td>
+<td style="text-align: right;">15.8733211</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Var</td>
+<td style="text-align: left;">DEB MD</td>
+<td style="text-align: right;">0.9612037</td>
+<td style="text-align: right;">0.0451003</td>
+<td style="text-align: right;">0.0555901</td>
+<td style="text-align: right;">0.3337150</td>
+<td style="text-align: right;">2.3104456</td>
+<td style="text-align: right;">20.6418291</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">RMSE</td>
+<td style="text-align: left;">EB</td>
+<td style="text-align: right;">1.3976762</td>
+<td style="text-align: right;">0.1933006</td>
+<td style="text-align: right;">0.2329548</td>
+<td style="text-align: right;">0.6861662</td>
+<td style="text-align: right;">2.1677600</td>
+<td style="text-align: right;">5.1177339</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">RMSE</td>
+<td style="text-align: left;">DEB MQ</td>
+<td style="text-align: right;">0.9857171</td>
+<td style="text-align: right;">0.1942831</td>
+<td style="text-align: right;">0.2261724</td>
+<td style="text-align: right;">0.5893083</td>
+<td style="text-align: right;">1.6381022</td>
+<td style="text-align: right;">4.5416193</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">RMSE</td>
+<td style="text-align: left;">DEB MD</td>
+<td style="text-align: right;">1.0094092</td>
+<td style="text-align: right;">0.2140815</td>
+<td style="text-align: right;">0.2394220</td>
+<td style="text-align: right;">0.5888905</td>
+<td style="text-align: right;">1.5564349</td>
+<td style="text-align: right;">4.6184045</td>
+</tr>
+</tbody>
+</table>
 </div>
-<p>Save results to RDS</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(result_total_df, </span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>        <span class="at">file =</span> <span class="st">&quot;../results/sim1-ebal.rds&quot;</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>and to csv</p>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>  <span class="co">#xtable(digits = 4)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Table A1 in Appendix</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">fwrite</span>(<span class="at">x =</span> result_total_df, <span class="at">file =</span> <span class="st">&quot;../results/sim1-ebal.csv&quot;</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>sim1_results[var <span class="sc">==</span> <span class="st">&quot;y1&quot;</span>, </span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>             .(<span class="at">Bias =</span> <span class="fu">mean</span>(value), <span class="at">Var =</span> <span class="fu">var</span>(value), <span class="at">RMSE =</span> <span class="fu">sqrt</span>(<span class="fu">mean</span>(value)<span class="sc">^</span><span class="dv">2</span> <span class="sc">+</span> <span class="fu">var</span>(value))),</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>             .(design, est_p, we)] <span class="sc">|&gt;</span> </span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">melt</span>(<span class="at">id.vars =</span> <span class="fu">c</span>(<span class="st">&quot;design&quot;</span>, <span class="st">&quot;est_p&quot;</span>, <span class="st">&quot;we&quot;</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">dcast</span>(variable <span class="sc">+</span> we <span class="sc">+</span> design <span class="sc">~</span> est_p, <span class="at">value.var =</span> <span class="st">&quot;value&quot;</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  {\(x) x[<span class="fu">order</span>(design, variable, we)]}() <span class="sc">|&gt;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="do">## uncomment for xtable</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transform</span>(<span class="at">design =</span> <span class="cn">NULL</span>) <span class="co">#|&gt; </span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="kable-table">
+<table class="table table-sm table-striped">
+<colgroup>
+<col style="width: 10%">
+<col style="width: 8%">
+<col style="width: 13%">
+<col style="width: 13%">
+<col style="width: 13%">
+<col style="width: 13%">
+<col style="width: 13%">
+<col style="width: 13%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">variable</th>
+<th style="text-align: left;">we</th>
+<th style="text-align: right;">ATT</th>
+<th style="text-align: right;">QTT (0.10)</th>
+<th style="text-align: right;">QTT (0.25)</th>
+<th style="text-align: right;">QTT (0.50)</th>
+<th style="text-align: right;">QTT (0.75)</th>
+<th style="text-align: right;">QTT (0.90)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Bias</td>
+<td style="text-align: left;">EB</td>
+<td style="text-align: right;">-0.0015109</td>
+<td style="text-align: right;">0.0029000</td>
+<td style="text-align: right;">0.0136775</td>
+<td style="text-align: right;">0.0031669</td>
+<td style="text-align: right;">0.0049453</td>
+<td style="text-align: right;">-0.0032672</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Bias</td>
+<td style="text-align: left;">DEB MQ</td>
+<td style="text-align: right;">-0.0009506</td>
+<td style="text-align: right;">0.0060108</td>
+<td style="text-align: right;">0.0138067</td>
+<td style="text-align: right;">0.0024451</td>
+<td style="text-align: right;">0.0025838</td>
+<td style="text-align: right;">0.0004716</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Bias</td>
+<td style="text-align: left;">DEB MD</td>
+<td style="text-align: right;">-0.0004455</td>
+<td style="text-align: right;">0.0103896</td>
+<td style="text-align: right;">0.0111440</td>
+<td style="text-align: right;">0.0051712</td>
+<td style="text-align: right;">0.0067442</td>
+<td style="text-align: right;">0.0046194</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Var</td>
+<td style="text-align: left;">EB</td>
+<td style="text-align: right;">0.0044055</td>
+<td style="text-align: right;">0.0616505</td>
+<td style="text-align: right;">0.0325022</td>
+<td style="text-align: right;">0.0269467</td>
+<td style="text-align: right;">0.0377822</td>
+<td style="text-align: right;">0.0967424</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Var</td>
+<td style="text-align: left;">DEB MQ</td>
+<td style="text-align: right;">0.0044794</td>
+<td style="text-align: right;">0.0581393</td>
+<td style="text-align: right;">0.0327435</td>
+<td style="text-align: right;">0.0273555</td>
+<td style="text-align: right;">0.0384236</td>
+<td style="text-align: right;">0.0983776</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Var</td>
+<td style="text-align: left;">DEB MD</td>
+<td style="text-align: right;">0.0048398</td>
+<td style="text-align: right;">0.0587014</td>
+<td style="text-align: right;">0.0341578</td>
+<td style="text-align: right;">0.0283330</td>
+<td style="text-align: right;">0.0401533</td>
+<td style="text-align: right;">0.0999646</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">RMSE</td>
+<td style="text-align: left;">EB</td>
+<td style="text-align: right;">0.0663913</td>
+<td style="text-align: right;">0.2483122</td>
+<td style="text-align: right;">0.1808018</td>
+<td style="text-align: right;">0.1641851</td>
+<td style="text-align: right;">0.1944393</td>
+<td style="text-align: right;">0.3110515</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">RMSE</td>
+<td style="text-align: left;">DEB MQ</td>
+<td style="text-align: right;">0.0669349</td>
+<td style="text-align: right;">0.2411957</td>
+<td style="text-align: right;">0.1814775</td>
+<td style="text-align: right;">0.1654129</td>
+<td style="text-align: right;">0.1960365</td>
+<td style="text-align: right;">0.3136525</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">RMSE</td>
+<td style="text-align: left;">DEB MD</td>
+<td style="text-align: right;">0.0695700</td>
+<td style="text-align: right;">0.2425065</td>
+<td style="text-align: right;">0.1851540</td>
+<td style="text-align: right;">0.1684035</td>
+<td style="text-align: right;">0.2004964</td>
+<td style="text-align: right;">0.3162056</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Bias</td>
+<td style="text-align: left;">EB</td>
+<td style="text-align: right;">-0.0040387</td>
+<td style="text-align: right;">0.0018987</td>
+<td style="text-align: right;">0.0021373</td>
+<td style="text-align: right;">-0.0082624</td>
+<td style="text-align: right;">0.0028433</td>
+<td style="text-align: right;">0.0021289</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Bias</td>
+<td style="text-align: left;">DEB MQ</td>
+<td style="text-align: right;">-0.0037255</td>
+<td style="text-align: right;">0.0031209</td>
+<td style="text-align: right;">0.0017090</td>
+<td style="text-align: right;">-0.0077936</td>
+<td style="text-align: right;">0.0015733</td>
+<td style="text-align: right;">-0.0015505</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Bias</td>
+<td style="text-align: left;">DEB MD</td>
+<td style="text-align: right;">-0.0034929</td>
+<td style="text-align: right;">0.0048165</td>
+<td style="text-align: right;">0.0007374</td>
+<td style="text-align: right;">-0.0089068</td>
+<td style="text-align: right;">0.0028737</td>
+<td style="text-align: right;">0.0096736</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Var</td>
+<td style="text-align: left;">EB</td>
+<td style="text-align: right;">0.0039673</td>
+<td style="text-align: right;">0.0601565</td>
+<td style="text-align: right;">0.0357953</td>
+<td style="text-align: right;">0.0259791</td>
+<td style="text-align: right;">0.0331525</td>
+<td style="text-align: right;">0.0783246</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Var</td>
+<td style="text-align: left;">DEB MQ</td>
+<td style="text-align: right;">0.0040691</td>
+<td style="text-align: right;">0.0579286</td>
+<td style="text-align: right;">0.0355610</td>
+<td style="text-align: right;">0.0270541</td>
+<td style="text-align: right;">0.0346830</td>
+<td style="text-align: right;">0.0828370</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Var</td>
+<td style="text-align: left;">DEB MD</td>
+<td style="text-align: right;">0.0041035</td>
+<td style="text-align: right;">0.0625665</td>
+<td style="text-align: right;">0.0368495</td>
+<td style="text-align: right;">0.0272423</td>
+<td style="text-align: right;">0.0355547</td>
+<td style="text-align: right;">0.0808904</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">RMSE</td>
+<td style="text-align: left;">EB</td>
+<td style="text-align: right;">0.0631161</td>
+<td style="text-align: right;">0.2452755</td>
+<td style="text-align: right;">0.1892085</td>
+<td style="text-align: right;">0.1613920</td>
+<td style="text-align: right;">0.1821005</td>
+<td style="text-align: right;">0.2798735</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">RMSE</td>
+<td style="text-align: left;">DEB MQ</td>
+<td style="text-align: right;">0.0638981</td>
+<td style="text-align: right;">0.2407039</td>
+<td style="text-align: right;">0.1885841</td>
+<td style="text-align: right;">0.1646657</td>
+<td style="text-align: right;">0.1862402</td>
+<td style="text-align: right;">0.2878183</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">RMSE</td>
+<td style="text-align: left;">DEB MD</td>
+<td style="text-align: right;">0.0641539</td>
+<td style="text-align: right;">0.2501794</td>
+<td style="text-align: right;">0.1919638</td>
+<td style="text-align: right;">0.1652926</td>
+<td style="text-align: right;">0.1885814</td>
+<td style="text-align: right;">0.2845768</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Bias</td>
+<td style="text-align: left;">EB</td>
+<td style="text-align: right;">0.0065934</td>
+<td style="text-align: right;">-0.2357160</td>
+<td style="text-align: right;">-0.1322163</td>
+<td style="text-align: right;">0.0029973</td>
+<td style="text-align: right;">0.1698382</td>
+<td style="text-align: right;">0.2624063</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Bias</td>
+<td style="text-align: left;">DEB MQ</td>
+<td style="text-align: right;">0.0052683</td>
+<td style="text-align: right;">-0.2229881</td>
+<td style="text-align: right;">-0.1212557</td>
+<td style="text-align: right;">0.0074825</td>
+<td style="text-align: right;">0.1644212</td>
+<td style="text-align: right;">0.2337340</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Bias</td>
+<td style="text-align: left;">DEB MD</td>
+<td style="text-align: right;">0.0061839</td>
+<td style="text-align: right;">-0.2436507</td>
+<td style="text-align: right;">-0.1266324</td>
+<td style="text-align: right;">0.0133665</td>
+<td style="text-align: right;">0.1873373</td>
+<td style="text-align: right;">0.2254249</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Var</td>
+<td style="text-align: left;">EB</td>
+<td style="text-align: right;">0.0080736</td>
+<td style="text-align: right;">0.0796969</td>
+<td style="text-align: right;">0.0465419</td>
+<td style="text-align: right;">0.0400093</td>
+<td style="text-align: right;">0.0613142</td>
+<td style="text-align: right;">0.1732548</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Var</td>
+<td style="text-align: left;">DEB MQ</td>
+<td style="text-align: right;">0.0088655</td>
+<td style="text-align: right;">0.0887217</td>
+<td style="text-align: right;">0.0517619</td>
+<td style="text-align: right;">0.0462170</td>
+<td style="text-align: right;">0.0695125</td>
+<td style="text-align: right;">0.1828327</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Var</td>
+<td style="text-align: left;">DEB MD</td>
+<td style="text-align: right;">0.0114400</td>
+<td style="text-align: right;">0.1368808</td>
+<td style="text-align: right;">0.0731328</td>
+<td style="text-align: right;">0.0595191</td>
+<td style="text-align: right;">0.0824072</td>
+<td style="text-align: right;">0.2348673</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">RMSE</td>
+<td style="text-align: left;">EB</td>
+<td style="text-align: right;">0.0900946</td>
+<td style="text-align: right;">0.3677757</td>
+<td style="text-align: right;">0.2530278</td>
+<td style="text-align: right;">0.2000457</td>
+<td style="text-align: right;">0.3002653</td>
+<td style="text-align: right;">0.4920487</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">RMSE</td>
+<td style="text-align: left;">DEB MQ</td>
+<td style="text-align: right;">0.0943040</td>
+<td style="text-align: right;">0.3720825</td>
+<td style="text-align: right;">0.2578078</td>
+<td style="text-align: right;">0.2151115</td>
+<td style="text-align: right;">0.3107199</td>
+<td style="text-align: right;">0.4873030</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">RMSE</td>
+<td style="text-align: left;">DEB MD</td>
+<td style="text-align: right;">0.1071364</td>
+<td style="text-align: right;">0.4429971</td>
+<td style="text-align: right;">0.2986110</td>
+<td style="text-align: right;">0.2443312</td>
+<td style="text-align: right;">0.3427863</td>
+<td style="text-align: right;">0.5344939</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>  <span class="co">#xtable(digits = 4)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Table A2 in the Appendix</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>sim1_results[var <span class="sc">==</span> <span class="st">&quot;y2&quot;</span>, </span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>             .(<span class="at">Bias =</span> <span class="fu">mean</span>(value), <span class="at">Var =</span> <span class="fu">var</span>(value), <span class="at">RMSE =</span> <span class="fu">sqrt</span>(<span class="fu">mean</span>(value)<span class="sc">^</span><span class="dv">2</span> <span class="sc">+</span> <span class="fu">var</span>(value))),</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>             .(design, est_p, we)] <span class="sc">|&gt;</span> </span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">melt</span>(<span class="at">id.vars =</span> <span class="fu">c</span>(<span class="st">&quot;design&quot;</span>, <span class="st">&quot;est_p&quot;</span>, <span class="st">&quot;we&quot;</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">dcast</span>(variable <span class="sc">+</span> we <span class="sc">+</span> design <span class="sc">~</span> est_p, <span class="at">value.var =</span> <span class="st">&quot;value&quot;</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  {\(x) x[<span class="fu">order</span>(design, variable, we)]}() <span class="sc">|&gt;</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  <span class="do">## uncomment for xtable</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transform</span>(<span class="at">design =</span> <span class="cn">NULL</span>) <span class="co">#|&gt; </span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="kable-table">
+<table class="table table-sm table-striped">
+<colgroup>
+<col style="width: 10%">
+<col style="width: 8%">
+<col style="width: 13%">
+<col style="width: 13%">
+<col style="width: 13%">
+<col style="width: 13%">
+<col style="width: 13%">
+<col style="width: 13%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">variable</th>
+<th style="text-align: left;">we</th>
+<th style="text-align: right;">ATT</th>
+<th style="text-align: right;">QTT (0.10)</th>
+<th style="text-align: right;">QTT (0.25)</th>
+<th style="text-align: right;">QTT (0.50)</th>
+<th style="text-align: right;">QTT (0.75)</th>
+<th style="text-align: right;">QTT (0.90)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Bias</td>
+<td style="text-align: left;">EB</td>
+<td style="text-align: right;">-0.0026629</td>
+<td style="text-align: right;">-0.0047254</td>
+<td style="text-align: right;">0.0002744</td>
+<td style="text-align: right;">0.0096563</td>
+<td style="text-align: right;">-0.0072154</td>
+<td style="text-align: right;">-0.0075403</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Bias</td>
+<td style="text-align: left;">DEB MQ</td>
+<td style="text-align: right;">-0.0015781</td>
+<td style="text-align: right;">0.0001441</td>
+<td style="text-align: right;">-0.0015658</td>
+<td style="text-align: right;">0.0098757</td>
+<td style="text-align: right;">-0.0061533</td>
+<td style="text-align: right;">-0.0087676</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Bias</td>
+<td style="text-align: left;">DEB MD</td>
+<td style="text-align: right;">-0.0014336</td>
+<td style="text-align: right;">-0.0048426</td>
+<td style="text-align: right;">-0.0028613</td>
+<td style="text-align: right;">0.0100516</td>
+<td style="text-align: right;">-0.0007715</td>
+<td style="text-align: right;">-0.0062084</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Var</td>
+<td style="text-align: left;">EB</td>
+<td style="text-align: right;">0.0048947</td>
+<td style="text-align: right;">0.0480390</td>
+<td style="text-align: right;">0.0302380</td>
+<td style="text-align: right;">0.0212893</td>
+<td style="text-align: right;">0.0309017</td>
+<td style="text-align: right;">0.0713225</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Var</td>
+<td style="text-align: left;">DEB MQ</td>
+<td style="text-align: right;">0.0049276</td>
+<td style="text-align: right;">0.0410533</td>
+<td style="text-align: right;">0.0235424</td>
+<td style="text-align: right;">0.0199552</td>
+<td style="text-align: right;">0.0265961</td>
+<td style="text-align: right;">0.0581057</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Var</td>
+<td style="text-align: left;">DEB MD</td>
+<td style="text-align: right;">0.0054695</td>
+<td style="text-align: right;">0.0383699</td>
+<td style="text-align: right;">0.0239034</td>
+<td style="text-align: right;">0.0210228</td>
+<td style="text-align: right;">0.0264361</td>
+<td style="text-align: right;">0.0562685</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">RMSE</td>
+<td style="text-align: left;">EB</td>
+<td style="text-align: right;">0.0700125</td>
+<td style="text-align: right;">0.2192289</td>
+<td style="text-align: right;">0.1738910</td>
+<td style="text-align: right;">0.1462278</td>
+<td style="text-align: right;">0.1759369</td>
+<td style="text-align: right;">0.2671691</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">RMSE</td>
+<td style="text-align: left;">DEB MQ</td>
+<td style="text-align: right;">0.0702146</td>
+<td style="text-align: right;">0.2026162</td>
+<td style="text-align: right;">0.1534432</td>
+<td style="text-align: right;">0.1416075</td>
+<td style="text-align: right;">0.1631992</td>
+<td style="text-align: right;">0.2412107</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">RMSE</td>
+<td style="text-align: left;">DEB MD</td>
+<td style="text-align: right;">0.0739701</td>
+<td style="text-align: right;">0.1959421</td>
+<td style="text-align: right;">0.1546336</td>
+<td style="text-align: right;">0.1453404</td>
+<td style="text-align: right;">0.1625936</td>
+<td style="text-align: right;">0.2372911</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Bias</td>
+<td style="text-align: left;">EB</td>
+<td style="text-align: right;">-0.0027965</td>
+<td style="text-align: right;">0.0046987</td>
+<td style="text-align: right;">0.0034236</td>
+<td style="text-align: right;">-0.0039008</td>
+<td style="text-align: right;">0.0008916</td>
+<td style="text-align: right;">0.0007994</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Bias</td>
+<td style="text-align: left;">DEB MQ</td>
+<td style="text-align: right;">-0.0028428</td>
+<td style="text-align: right;">0.0054689</td>
+<td style="text-align: right;">0.0014373</td>
+<td style="text-align: right;">-0.0052900</td>
+<td style="text-align: right;">0.0016186</td>
+<td style="text-align: right;">-0.0025185</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Bias</td>
+<td style="text-align: left;">DEB MD</td>
+<td style="text-align: right;">-0.0028122</td>
+<td style="text-align: right;">0.0008547</td>
+<td style="text-align: right;">-0.0004008</td>
+<td style="text-align: right;">-0.0010763</td>
+<td style="text-align: right;">0.0044173</td>
+<td style="text-align: right;">-0.0004197</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Var</td>
+<td style="text-align: left;">EB</td>
+<td style="text-align: right;">0.0045171</td>
+<td style="text-align: right;">0.0558522</td>
+<td style="text-align: right;">0.0314127</td>
+<td style="text-align: right;">0.0193989</td>
+<td style="text-align: right;">0.0269314</td>
+<td style="text-align: right;">0.0597955</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Var</td>
+<td style="text-align: left;">DEB MQ</td>
+<td style="text-align: right;">0.0044782</td>
+<td style="text-align: right;">0.0468190</td>
+<td style="text-align: right;">0.0262770</td>
+<td style="text-align: right;">0.0173265</td>
+<td style="text-align: right;">0.0208849</td>
+<td style="text-align: right;">0.0531696</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Var</td>
+<td style="text-align: left;">DEB MD</td>
+<td style="text-align: right;">0.0044505</td>
+<td style="text-align: right;">0.0441554</td>
+<td style="text-align: right;">0.0254399</td>
+<td style="text-align: right;">0.0169010</td>
+<td style="text-align: right;">0.0220173</td>
+<td style="text-align: right;">0.0471523</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">RMSE</td>
+<td style="text-align: left;">EB</td>
+<td style="text-align: right;">0.0672674</td>
+<td style="text-align: right;">0.2363775</td>
+<td style="text-align: right;">0.1772692</td>
+<td style="text-align: right;">0.1393345</td>
+<td style="text-align: right;">0.1641104</td>
+<td style="text-align: right;">0.2445325</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">RMSE</td>
+<td style="text-align: left;">DEB MQ</td>
+<td style="text-align: right;">0.0669798</td>
+<td style="text-align: right;">0.2164461</td>
+<td style="text-align: right;">0.1621082</td>
+<td style="text-align: right;">0.1317366</td>
+<td style="text-align: right;">0.1445253</td>
+<td style="text-align: right;">0.2305991</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">RMSE</td>
+<td style="text-align: left;">DEB MD</td>
+<td style="text-align: right;">0.0667716</td>
+<td style="text-align: right;">0.2101335</td>
+<td style="text-align: right;">0.1594993</td>
+<td style="text-align: right;">0.1300083</td>
+<td style="text-align: right;">0.1484482</td>
+<td style="text-align: right;">0.2171461</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Bias</td>
+<td style="text-align: left;">EB</td>
+<td style="text-align: right;">0.0388028</td>
+<td style="text-align: right;">-0.3582218</td>
+<td style="text-align: right;">-0.2149305</td>
+<td style="text-align: right;">-0.0178501</td>
+<td style="text-align: right;">0.2203866</td>
+<td style="text-align: right;">0.5334777</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Bias</td>
+<td style="text-align: left;">DEB MQ</td>
+<td style="text-align: right;">0.0504465</td>
+<td style="text-align: right;">-0.2128652</td>
+<td style="text-align: right;">-0.0955185</td>
+<td style="text-align: right;">-0.0032695</td>
+<td style="text-align: right;">0.1351222</td>
+<td style="text-align: right;">0.4000544</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Bias</td>
+<td style="text-align: left;">DEB MD</td>
+<td style="text-align: right;">0.0696592</td>
+<td style="text-align: right;">-0.1018244</td>
+<td style="text-align: right;">-0.0344567</td>
+<td style="text-align: right;">0.0093442</td>
+<td style="text-align: right;">0.1055547</td>
+<td style="text-align: right;">0.3457066</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Var</td>
+<td style="text-align: left;">EB</td>
+<td style="text-align: right;">0.0087839</td>
+<td style="text-align: right;">0.0552910</td>
+<td style="text-align: right;">0.0267100</td>
+<td style="text-align: right;">0.0256476</td>
+<td style="text-align: right;">0.0505304</td>
+<td style="text-align: right;">0.1156865</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Var</td>
+<td style="text-align: left;">DEB MQ</td>
+<td style="text-align: right;">0.0095250</td>
+<td style="text-align: right;">0.0464877</td>
+<td style="text-align: right;">0.0241673</td>
+<td style="text-align: right;">0.0269382</td>
+<td style="text-align: right;">0.0524125</td>
+<td style="text-align: right;">0.1252429</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Var</td>
+<td style="text-align: left;">DEB MD</td>
+<td style="text-align: right;">0.0150174</td>
+<td style="text-align: right;">0.0514011</td>
+<td style="text-align: right;">0.0360819</td>
+<td style="text-align: right;">0.0387308</td>
+<td style="text-align: right;">0.0712287</td>
+<td style="text-align: right;">0.1393587</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">RMSE</td>
+<td style="text-align: left;">EB</td>
+<td style="text-align: right;">0.1014374</td>
+<td style="text-align: right;">0.4285018</td>
+<td style="text-align: right;">0.2700095</td>
+<td style="text-align: right;">0.1611403</td>
+<td style="text-align: right;">0.3148025</td>
+<td style="text-align: right;">0.6326807</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">RMSE</td>
+<td style="text-align: left;">DEB MQ</td>
+<td style="text-align: right;">0.1098631</td>
+<td style="text-align: right;">0.3029839</td>
+<td style="text-align: right;">0.1824584</td>
+<td style="text-align: right;">0.1641613</td>
+<td style="text-align: right;">0.2658394</td>
+<td style="text-align: right;">0.5341221</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">RMSE</td>
+<td style="text-align: left;">DEB MD</td>
+<td style="text-align: right;">0.1409603</td>
+<td style="text-align: right;">0.2485343</td>
+<td style="text-align: right;">0.1930522</td>
+<td style="text-align: right;">0.1970232</td>
+<td style="text-align: right;">0.2870027</td>
+<td style="text-align: right;">0.5087944</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>  <span class="co">#xtable(digits = 4)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Additional plots</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (des <span class="cf">in</span> <span class="fu">c</span>(<span class="st">&quot;d1&quot;</span>, <span class="st">&quot;d2&quot;</span>, <span class="st">&quot;d3&quot;</span>)) {</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  sim1_results[, .(<span class="at">Bias =</span> <span class="fu">mean</span>(value), <span class="at">SE =</span> <span class="fu">sd</span>(value), <span class="at">RMSE =</span> <span class="fu">sqrt</span>(<span class="fu">mean</span>(value)<span class="sc">^</span><span class="dv">2</span> <span class="sc">+</span> <span class="fu">var</span>(value))),</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>             .(design, est_p, we, var)] <span class="sc">|&gt;</span> </span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>      <span class="fu">melt</span>(<span class="at">id.vars =</span> <span class="fu">c</span>(<span class="st">&quot;design&quot;</span>, <span class="st">&quot;est_p&quot;</span>, <span class="st">&quot;we&quot;</span>, <span class="st">&quot;var&quot;</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>      <span class="fu">subset</span>(design <span class="sc">==</span> des) <span class="sc">|&gt;</span> </span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>      <span class="fu">ggplot</span>(<span class="at">data =</span> _, <span class="fu">aes</span>(<span class="at">x =</span> est_p, <span class="at">y =</span> value, <span class="at">fill =</span> we)) <span class="sc">+</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>      <span class="fu">geom_col</span>(<span class="at">position =</span> <span class="st">&quot;dodge&quot;</span>, <span class="at">color =</span> <span class="st">&quot;black&quot;</span>) <span class="sc">+</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>      <span class="fu">facet_grid</span>(var <span class="sc">~</span> variable , <span class="at">scales =</span> <span class="st">&quot;free&quot;</span>, </span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>                 <span class="at">labeller =</span> <span class="fu">labeller</span>(<span class="at">var =</span> <span class="fu">c</span>(<span class="st">&quot;y1&quot;</span><span class="ot">=</span><span class="st">&quot;Y1</span><span class="sc">\n</span><span class="st">linear&quot;</span>,</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>                                             <span class="st">&quot;y2&quot;</span><span class="ot">=</span><span class="st">&quot;Y2</span><span class="sc">\n</span><span class="st">medium non-lin&quot;</span>,</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>                                             <span class="st">&quot;y3&quot;</span><span class="ot">=</span><span class="st">&quot;Y3</span><span class="sc">\n</span><span class="st">strong non-lin&quot;</span>))) <span class="sc">+</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>      <span class="fu">scale_fill_brewer</span>(<span class="at">type =</span> <span class="st">&quot;qual&quot;</span>, <span class="at">palette =</span> <span class="st">&quot;Set1&quot;</span>) <span class="sc">+</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>      <span class="fu">theme</span>(<span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">angle=</span><span class="dv">45</span>, <span class="at">vjust=</span><span class="dv">1</span>, <span class="at">hjust=</span><span class="dv">1</span>)) <span class="sc">+</span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>      <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">&quot;Causal parameter&quot;</span>, <span class="at">y =</span> <span class="st">&quot;Values (note different scales)&quot;</span>, <span class="at">fill =</span> <span class="st">&quot;Estimator&quot;</span>)</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggsave</span>(<span class="at">filename =</span> <span class="fu">glue</span>(<span class="st">&quot;../results/fig-sim-1-ebal-{des}.png&quot;</span>), <span class="at">width =</span> <span class="dv">7</span>, <span class="at">height =</span> <span class="dv">5</span>)</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Boxplots</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>sim1_results <span class="sc">|&gt;</span> </span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="at">data =</span> _, <span class="fu">aes</span>(<span class="at">x =</span> est_p, <span class="at">y =</span> value, <span class="at">color =</span> we)) <span class="sc">+</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="dv">0</span>, <span class="at">linetype =</span> <span class="st">&quot;dashed&quot;</span>) <span class="sc">+</span> </span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_boxplot</span>() <span class="sc">+</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_grid</span>(var <span class="sc">~</span> design, <span class="at">scale =</span> <span class="st">&quot;free_y&quot;</span>) <span class="sc">+</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_brewer</span>(<span class="at">type =</span> <span class="st">&quot;qual&quot;</span>, <span class="at">palette =</span> <span class="st">&quot;Set1&quot;</span>) <span class="sc">+</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">&quot;Causal parameter&quot;</span>, <span class="at">y =</span> <span class="st">&quot;Value&quot;</span>, <span class="at">color =</span> <span class="st">&quot;Method&quot;</span>) <span class="sc">+</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="dv">45</span>, <span class="at">vjust=</span><span class="dv">1</span>,<span class="at">hjust=</span><span class="dv">1</span>)) <span class="ot">-&gt;</span> p1</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="fu">ggsave</span>(<span class="at">plot =</span> p1, <span class="at">filename =</span> <span class="fu">glue</span>(<span class="st">&quot;../results/fig-sim-1-ebal-boxplot.png&quot;</span>), <span class="at">width =</span> <span class="dv">7</span>, <span class="at">height =</span> <span class="dv">5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="result-for-the-simulation-1-propensity-score" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Result for the simulation 1 – Propensity score</h1>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>sim1 <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">&quot;../results/sim2-dgp1-1000.rds&quot;</span>)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>sim2 <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">&quot;../results/sim2-dgp2-1000.rds&quot;</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Table 2</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>sim2<span class="sc">$</span>ATE <span class="sc">|&gt;</span> </span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">melt</span>(<span class="at">id.var =</span> <span class="st">&quot;id&quot;</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">setDT</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  {\(x) x[, .(<span class="at">Bias =</span> <span class="fu">mean</span>(value)<span class="sc">-</span><span class="dv">10</span>, <span class="at">Var =</span> <span class="fu">var</span>(value), <span class="at">RMSE =</span> <span class="fu">sqrt</span>( (<span class="fu">mean</span>(value)<span class="sc">-</span><span class="dv">10</span>)<span class="sc">^</span><span class="dv">2</span> <span class="sc">+</span> <span class="fu">var</span>(value))), .(<span class="at">est=</span>variable)]}() <span class="sc">|&gt;</span> </span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transform</span>(<span class="at">quant =</span> <span class="st">&quot;ATE&quot;</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rbind</span>(sim2<span class="sc">$</span>QTE[, .(<span class="at">Bias =</span> <span class="fu">mean</span>(value)<span class="sc">-</span><span class="dv">10</span>, <span class="at">Var =</span> <span class="fu">var</span>(value), <span class="at">RMSE =</span> <span class="fu">sqrt</span>( (<span class="fu">mean</span>(value)<span class="sc">-</span><span class="dv">10</span>)<span class="sc">^</span><span class="dv">2</span> <span class="sc">+</span> <span class="fu">var</span>(value))), </span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>                 .(est, <span class="at">quant =</span> <span class="fu">factor</span>(quant, <span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>, <span class="fu">c</span>(<span class="st">&quot;0.10&quot;</span>, <span class="st">&quot;0.25&quot;</span>, <span class="st">&quot;0.50&quot;</span>, <span class="st">&quot;0.75&quot;</span>, <span class="st">&quot;0.90&quot;</span>)))] ) <span class="sc">|&gt;</span> </span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">melt</span>(<span class="at">id.vars =</span> <span class="fu">c</span>(<span class="st">&quot;est&quot;</span>, <span class="st">&quot;quant&quot;</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transform</span>(<span class="at">quant =</span> <span class="fu">factor</span>(quant, </span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>                           <span class="fu">c</span>(<span class="st">&quot;ATE&quot;</span>, <span class="st">&quot;0.10&quot;</span>, <span class="st">&quot;0.25&quot;</span>, <span class="st">&quot;0.50&quot;</span>, <span class="st">&quot;0.75&quot;</span>, <span class="st">&quot;0.90&quot;</span>),</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>                           <span class="fu">c</span>(<span class="st">&quot;ATE&quot;</span>, <span class="st">&quot;QTE(0.10)&quot;</span>, <span class="st">&quot;QTE(0.25)&quot;</span>, <span class="st">&quot;QTE(0.50)&quot;</span>, <span class="st">&quot;QTE(0.75)&quot;</span>, <span class="st">&quot;QTE(0.90)&quot;</span>)),</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>            <span class="at">est =</span> <span class="fu">factor</span>(est,</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>                         <span class="fu">c</span>(<span class="st">&quot;IPS (exp)&quot;</span>, <span class="st">&quot;IPS (ind)&quot;</span>, <span class="st">&quot;IPS (proj)&quot;</span>, </span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>                           <span class="st">&quot;CPBS (e)&quot;</span>, <span class="st">&quot;CBPS (e MQ)&quot;</span>, <span class="st">&quot;CBPS (e MP)&quot;</span>, <span class="st">&quot;CPBS (e P)&quot;</span>, </span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>                           <span class="st">&quot;CBPS (o)&quot;</span>, <span class="st">&quot;CBPS (o MQ)&quot;</span>, <span class="st">&quot;CBPS (o MP)&quot;</span>, <span class="st">&quot;CPBS (o P)&quot;</span>),</span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>                         <span class="fu">c</span>(<span class="st">&quot;IPS (exp)&quot;</span>, <span class="st">&quot;IPS (ind)&quot;</span>, <span class="st">&quot;IPS (proj)&quot;</span>, </span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>                           <span class="st">&quot;CBPS (e)&quot;</span>, <span class="st">&quot;DBPS (e MQ)&quot;</span>, <span class="st">&quot;DBPS (e MP)&quot;</span>, <span class="st">&quot;DBPS (e P)&quot;</span>, </span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>                           <span class="st">&quot;CBPS (o)&quot;</span>, <span class="st">&quot;DBPS (o MQ)&quot;</span>, <span class="st">&quot;DBPS (o MP)&quot;</span>, <span class="st">&quot;DBPS (o P)&quot;</span>))) <span class="ot">-&gt;</span> sim2_results2</span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>sim2_results2 <span class="sc">|&gt;</span></span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">dcast</span>(variable <span class="sc">+</span> est <span class="sc">~</span> quant, <span class="at">value.var =</span> <span class="st">&quot;value&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>  <span class="co"># uncomment for xtable</span></span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">subset</span>(<span class="at">select =</span> <span class="sc">-</span>variable) <span class="co">#|&gt; </span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="kable-table">
+<table class="table table-sm table-striped">
+<colgroup>
+<col style="width: 15%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">est</th>
+<th style="text-align: right;">ATE</th>
+<th style="text-align: right;">QTE(0.10)</th>
+<th style="text-align: right;">QTE(0.25)</th>
+<th style="text-align: right;">QTE(0.50)</th>
+<th style="text-align: right;">QTE(0.75)</th>
+<th style="text-align: right;">QTE(0.90)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">IPS (exp)</td>
+<td style="text-align: right;">2.0073337</td>
+<td style="text-align: right;">-4.0189800</td>
+<td style="text-align: right;">-2.2246727</td>
+<td style="text-align: right;">0.7095287</td>
+<td style="text-align: right;">5.2300513</td>
+<td style="text-align: right;">10.4739521</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">IPS (ind)</td>
+<td style="text-align: right;">2.2843920</td>
+<td style="text-align: right;">-3.0930759</td>
+<td style="text-align: right;">-1.3918001</td>
+<td style="text-align: right;">1.1960453</td>
+<td style="text-align: right;">5.1095809</td>
+<td style="text-align: right;">9.4856179</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">IPS (proj)</td>
+<td style="text-align: right;">0.3017682</td>
+<td style="text-align: right;">-2.6261304</td>
+<td style="text-align: right;">-1.8409450</td>
+<td style="text-align: right;">-0.4423497</td>
+<td style="text-align: right;">1.9470523</td>
+<td style="text-align: right;">4.2647750</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">CBPS (e)</td>
+<td style="text-align: right;">2.6557725</td>
+<td style="text-align: right;">-3.2477797</td>
+<td style="text-align: right;">-1.4446769</td>
+<td style="text-align: right;">1.4963983</td>
+<td style="text-align: right;">5.8841223</td>
+<td style="text-align: right;">10.5781850</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">DBPS (e MQ)</td>
+<td style="text-align: right;">0.6931133</td>
+<td style="text-align: right;">-1.4791837</td>
+<td style="text-align: right;">-0.8638920</td>
+<td style="text-align: right;">-0.0642073</td>
+<td style="text-align: right;">1.8188263</td>
+<td style="text-align: right;">4.1355435</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">DBPS (e MP)</td>
+<td style="text-align: right;">0.2632592</td>
+<td style="text-align: right;">-1.2441248</td>
+<td style="text-align: right;">-0.8091856</td>
+<td style="text-align: right;">-0.1932650</td>
+<td style="text-align: right;">1.1208650</td>
+<td style="text-align: right;">2.5603690</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">DBPS (e P)</td>
+<td style="text-align: right;">-0.4888023</td>
+<td style="text-align: right;">-0.4936499</td>
+<td style="text-align: right;">-0.6743258</td>
+<td style="text-align: right;">-0.5460880</td>
+<td style="text-align: right;">-0.2157602</td>
+<td style="text-align: right;">-0.4357232</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">CBPS (o)</td>
+<td style="text-align: right;">2.9650703</td>
+<td style="text-align: right;">-2.9018540</td>
+<td style="text-align: right;">-1.1142175</td>
+<td style="text-align: right;">1.7326998</td>
+<td style="text-align: right;">6.0673610</td>
+<td style="text-align: right;">11.2098597</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">DBPS (o MQ)</td>
+<td style="text-align: right;">0.6931133</td>
+<td style="text-align: right;">-1.1226613</td>
+<td style="text-align: right;">-0.6875755</td>
+<td style="text-align: right;">-0.1782599</td>
+<td style="text-align: right;">1.1199281</td>
+<td style="text-align: right;">2.9258116</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">DBPS (o MP)</td>
+<td style="text-align: right;">0.2839105</td>
+<td style="text-align: right;">-0.7870124</td>
+<td style="text-align: right;">-0.5273513</td>
+<td style="text-align: right;">-0.0615868</td>
+<td style="text-align: right;">0.8368510</td>
+<td style="text-align: right;">1.8840983</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">DBPS (o P)</td>
+<td style="text-align: right;">0.1041382</td>
+<td style="text-align: right;">0.0238700</td>
+<td style="text-align: right;">-0.1466003</td>
+<td style="text-align: right;">-0.0089896</td>
+<td style="text-align: right;">0.3576011</td>
+<td style="text-align: right;">0.3467751</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">IPS (exp)</td>
+<td style="text-align: right;">6.7100546</td>
+<td style="text-align: right;">13.8096218</td>
+<td style="text-align: right;">9.8939291</td>
+<td style="text-align: right;">8.0500193</td>
+<td style="text-align: right;">13.4848800</td>
+<td style="text-align: right;">38.8826937</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">IPS (ind)</td>
+<td style="text-align: right;">7.2561372</td>
+<td style="text-align: right;">15.4085398</td>
+<td style="text-align: right;">11.1044114</td>
+<td style="text-align: right;">8.8529833</td>
+<td style="text-align: right;">14.4144744</td>
+<td style="text-align: right;">34.6430042</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">IPS (proj)</td>
+<td style="text-align: right;">5.9519160</td>
+<td style="text-align: right;">14.6141170</td>
+<td style="text-align: right;">10.8651504</td>
+<td style="text-align: right;">7.9916819</td>
+<td style="text-align: right;">12.8501174</td>
+<td style="text-align: right;">31.4331099</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">CBPS (e)</td>
+<td style="text-align: right;">6.5495305</td>
+<td style="text-align: right;">13.2422753</td>
+<td style="text-align: right;">9.5447927</td>
+<td style="text-align: right;">8.4143465</td>
+<td style="text-align: right;">14.5832297</td>
+<td style="text-align: right;">35.3576625</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">DBPS (e MQ)</td>
+<td style="text-align: right;">5.9921666</td>
+<td style="text-align: right;">11.2284255</td>
+<td style="text-align: right;">8.8770188</td>
+<td style="text-align: right;">8.5188770</td>
+<td style="text-align: right;">12.2347793</td>
+<td style="text-align: right;">24.3055090</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">DBPS (e MP)</td>
+<td style="text-align: right;">6.5039129</td>
+<td style="text-align: right;">12.2954204</td>
+<td style="text-align: right;">9.9443972</td>
+<td style="text-align: right;">9.2285919</td>
+<td style="text-align: right;">12.8167234</td>
+<td style="text-align: right;">25.2888074</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">DBPS (e P)</td>
+<td style="text-align: right;">5.7911593</td>
+<td style="text-align: right;">11.6075401</td>
+<td style="text-align: right;">9.7879764</td>
+<td style="text-align: right;">8.7242759</td>
+<td style="text-align: right;">12.1643885</td>
+<td style="text-align: right;">22.9389471</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">CBPS (o)</td>
+<td style="text-align: right;">7.6237486</td>
+<td style="text-align: right;">12.1805315</td>
+<td style="text-align: right;">9.4588746</td>
+<td style="text-align: right;">8.5987946</td>
+<td style="text-align: right;">15.6431324</td>
+<td style="text-align: right;">42.3916084</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">DBPS (o MQ)</td>
+<td style="text-align: right;">5.9921666</td>
+<td style="text-align: right;">10.5597209</td>
+<td style="text-align: right;">8.4340290</td>
+<td style="text-align: right;">8.1759626</td>
+<td style="text-align: right;">11.6607812</td>
+<td style="text-align: right;">23.6440111</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">DBPS (o MP)</td>
+<td style="text-align: right;">5.4491339</td>
+<td style="text-align: right;">10.7478925</td>
+<td style="text-align: right;">8.6797056</td>
+<td style="text-align: right;">8.0561380</td>
+<td style="text-align: right;">10.7196980</td>
+<td style="text-align: right;">19.8877995</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">DBPS (o P)</td>
+<td style="text-align: right;">5.1791455</td>
+<td style="text-align: right;">10.5076702</td>
+<td style="text-align: right;">8.5301164</td>
+<td style="text-align: right;">7.9813839</td>
+<td style="text-align: right;">10.8402750</td>
+<td style="text-align: right;">20.0139394</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">IPS (exp)</td>
+<td style="text-align: right;">3.2771089</td>
+<td style="text-align: right;">5.4737393</td>
+<td style="text-align: right;">3.8526741</td>
+<td style="text-align: right;">2.9246282</td>
+<td style="text-align: right;">6.3904864</td>
+<td style="text-align: right;">12.1896008</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">IPS (ind)</td>
+<td style="text-align: right;">3.5319377</td>
+<td style="text-align: right;">4.9975653</td>
+<td style="text-align: right;">3.6113043</td>
+<td style="text-align: right;">3.2067909</td>
+<td style="text-align: right;">6.3657122</td>
+<td style="text-align: right;">11.1633306</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">IPS (proj)</td>
+<td style="text-align: right;">2.4582473</td>
+<td style="text-align: right;">4.6379605</td>
+<td style="text-align: right;">3.7754773</td>
+<td style="text-align: right;">2.8613555</td>
+<td style="text-align: right;">4.0793541</td>
+<td style="text-align: right;">7.0442470</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">CBPS (e)</td>
+<td style="text-align: right;">3.6881781</td>
+<td style="text-align: right;">4.8775351</td>
+<td style="text-align: right;">3.4105548</td>
+<td style="text-align: right;">3.2639783</td>
+<td style="text-align: right;">7.0147078</td>
+<td style="text-align: right;">12.1348944</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">DBPS (e MQ)</td>
+<td style="text-align: right;">2.5441251</td>
+<td style="text-align: right;">3.6628418</td>
+<td style="text-align: right;">3.1021490</td>
+<td style="text-align: right;">2.9194177</td>
+<td style="text-align: right;">3.9424496</td>
+<td style="text-align: right;">6.4349226</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">DBPS (e MP)</td>
+<td style="text-align: right;">2.5638288</td>
+<td style="text-align: right;">3.7206541</td>
+<td style="text-align: right;">3.2556379</td>
+<td style="text-align: right;">3.0440012</td>
+<td style="text-align: right;">3.7514080</td>
+<td style="text-align: right;">5.6430751</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">DBPS (e P)</td>
+<td style="text-align: right;">2.4556235</td>
+<td style="text-align: right;">3.4425616</td>
+<td style="text-align: right;">3.2004206</td>
+<td style="text-align: right;">3.0037457</td>
+<td style="text-align: right;">3.4944157</td>
+<td style="text-align: right;">4.8092413</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">CBPS (o)</td>
+<td style="text-align: right;">4.0515911</td>
+<td style="text-align: right;">4.5388642</td>
+<td style="text-align: right;">3.2711398</td>
+<td style="text-align: right;">3.4060304</td>
+<td style="text-align: right;">7.2426516</td>
+<td style="text-align: right;">12.9635089</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">DBPS (o MQ)</td>
+<td style="text-align: right;">2.5441251</td>
+<td style="text-align: right;">3.4380357</td>
+<td style="text-align: right;">2.9844244</td>
+<td style="text-align: right;">2.8649152</td>
+<td style="text-align: right;">3.5937474</td>
+<td style="text-align: right;">5.6748907</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">DBPS (o MP)</td>
+<td style="text-align: right;">2.3515397</td>
+<td style="text-align: right;">3.3715399</td>
+<td style="text-align: right;">2.9929593</td>
+<td style="text-align: right;">2.8390017</td>
+<td style="text-align: right;">3.3793517</td>
+<td style="text-align: right;">4.8412422</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">DBPS (o P)</td>
+<td style="text-align: right;">2.2781550</td>
+<td style="text-align: right;">3.2416416</td>
+<td style="text-align: right;">2.9243133</td>
+<td style="text-align: right;">2.8251486</td>
+<td style="text-align: right;">3.3118203</td>
+<td style="text-align: right;">4.4871140</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>  <span class="co">#xtable(digits = 4) </span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Table A3 in the Appendix</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>sim1<span class="sc">$</span>ATE <span class="sc">|&gt;</span> </span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">melt</span>(<span class="at">id.var =</span> <span class="st">&quot;id&quot;</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">setDT</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  {\(x) x[, .(<span class="at">Bias =</span> <span class="fu">mean</span>(value)<span class="sc">-</span><span class="dv">10</span>, <span class="at">Var =</span> <span class="fu">var</span>(value), <span class="at">RMSE =</span> <span class="fu">sqrt</span>( (<span class="fu">mean</span>(value)<span class="sc">-</span><span class="dv">10</span>)<span class="sc">^</span><span class="dv">2</span> <span class="sc">+</span> <span class="fu">var</span>(value))), .(<span class="at">est=</span>variable)]}() <span class="sc">|&gt;</span> </span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transform</span>(<span class="at">quant =</span> <span class="st">&quot;ATE&quot;</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rbind</span>(sim2<span class="sc">$</span>QTE[, .(<span class="at">Bias =</span> <span class="fu">mean</span>(value)<span class="sc">-</span><span class="dv">10</span>, <span class="at">Var =</span> <span class="fu">var</span>(value), <span class="at">RMSE =</span> <span class="fu">sqrt</span>( (<span class="fu">mean</span>(value)<span class="sc">-</span><span class="dv">10</span>)<span class="sc">^</span><span class="dv">2</span> <span class="sc">+</span> <span class="fu">var</span>(value))), </span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>                 .(est, <span class="at">quant =</span> <span class="fu">factor</span>(quant, <span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>, <span class="fu">c</span>(<span class="st">&quot;0.10&quot;</span>, <span class="st">&quot;0.25&quot;</span>, <span class="st">&quot;0.50&quot;</span>, <span class="st">&quot;0.75&quot;</span>, <span class="st">&quot;0.90&quot;</span>)))] ) <span class="sc">|&gt;</span> </span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">melt</span>(<span class="at">id.vars =</span> <span class="fu">c</span>(<span class="st">&quot;est&quot;</span>, <span class="st">&quot;quant&quot;</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transform</span>(<span class="at">quant =</span> <span class="fu">factor</span>(quant, </span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>                           <span class="fu">c</span>(<span class="st">&quot;ATE&quot;</span>, <span class="st">&quot;0.10&quot;</span>, <span class="st">&quot;0.25&quot;</span>, <span class="st">&quot;0.50&quot;</span>, <span class="st">&quot;0.75&quot;</span>, <span class="st">&quot;0.90&quot;</span>),</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>                           <span class="fu">c</span>(<span class="st">&quot;ATE&quot;</span>, <span class="st">&quot;QTE(0.10)&quot;</span>, <span class="st">&quot;QTE(0.25)&quot;</span>, <span class="st">&quot;QTE(0.50)&quot;</span>, <span class="st">&quot;QTE(0.75)&quot;</span>, <span class="st">&quot;QTE(0.90)&quot;</span>)),</span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>            <span class="at">est =</span> <span class="fu">factor</span>(est,</span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>                         <span class="fu">c</span>(<span class="st">&quot;IPS (exp)&quot;</span>, <span class="st">&quot;IPS (ind)&quot;</span>, <span class="st">&quot;IPS (proj)&quot;</span>, </span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>                           <span class="st">&quot;CPBS (e)&quot;</span>, <span class="st">&quot;CBPS (e MQ)&quot;</span>, <span class="st">&quot;CBPS (e MP)&quot;</span>, <span class="st">&quot;CPBS (e P)&quot;</span>, </span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>                           <span class="st">&quot;CBPS (o)&quot;</span>, <span class="st">&quot;CBPS (o MQ)&quot;</span>, <span class="st">&quot;CBPS (o MP)&quot;</span>, <span class="st">&quot;CPBS (o P)&quot;</span>),</span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>                         <span class="fu">c</span>(<span class="st">&quot;IPS (exp)&quot;</span>, <span class="st">&quot;IPS (ind)&quot;</span>, <span class="st">&quot;IPS (proj)&quot;</span>, </span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a>                           <span class="st">&quot;CBPS (e)&quot;</span>, <span class="st">&quot;DBPS (e MQ)&quot;</span>, <span class="st">&quot;DBPS (e MP)&quot;</span>, <span class="st">&quot;DBPS (e P)&quot;</span>, </span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>                           <span class="st">&quot;CBPS (o)&quot;</span>, <span class="st">&quot;DBPS (o MQ)&quot;</span>, <span class="st">&quot;DBPS (o MP)&quot;</span>, <span class="st">&quot;DBPS (o P)&quot;</span>)))<span class="ot">-&gt;</span> sim2_results1</span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>sim2_results1 <span class="sc">|&gt;</span> </span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">dcast</span>(variable <span class="sc">+</span> est <span class="sc">~</span> quant, <span class="at">value.var =</span> <span class="st">&quot;value&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a>  <span class="co"># uncomment for xtable</span></span>
+<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">subset</span>(<span class="at">select =</span> <span class="sc">-</span>variable) <span class="co">#|&gt; </span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="kable-table">
+<table class="table table-sm table-striped">
+<colgroup>
+<col style="width: 15%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">est</th>
+<th style="text-align: right;">ATE</th>
+<th style="text-align: right;">QTE(0.10)</th>
+<th style="text-align: right;">QTE(0.25)</th>
+<th style="text-align: right;">QTE(0.50)</th>
+<th style="text-align: right;">QTE(0.75)</th>
+<th style="text-align: right;">QTE(0.90)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">IPS (exp)</td>
+<td style="text-align: right;">-0.0378475</td>
+<td style="text-align: right;">-4.0189800</td>
+<td style="text-align: right;">-2.2246727</td>
+<td style="text-align: right;">0.7095287</td>
+<td style="text-align: right;">5.2300513</td>
+<td style="text-align: right;">10.4739521</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">IPS (ind)</td>
+<td style="text-align: right;">0.3535896</td>
+<td style="text-align: right;">-3.0930759</td>
+<td style="text-align: right;">-1.3918001</td>
+<td style="text-align: right;">1.1960453</td>
+<td style="text-align: right;">5.1095809</td>
+<td style="text-align: right;">9.4856179</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">IPS (proj)</td>
+<td style="text-align: right;">-0.0389546</td>
+<td style="text-align: right;">-2.6261304</td>
+<td style="text-align: right;">-1.8409450</td>
+<td style="text-align: right;">-0.4423497</td>
+<td style="text-align: right;">1.9470523</td>
+<td style="text-align: right;">4.2647750</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">CBPS (e)</td>
+<td style="text-align: right;">-0.1158333</td>
+<td style="text-align: right;">-3.2477797</td>
+<td style="text-align: right;">-1.4446769</td>
+<td style="text-align: right;">1.4963983</td>
+<td style="text-align: right;">5.8841223</td>
+<td style="text-align: right;">10.5781850</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">DBPS (e MQ)</td>
+<td style="text-align: right;">-0.0485158</td>
+<td style="text-align: right;">-1.4791837</td>
+<td style="text-align: right;">-0.8638920</td>
+<td style="text-align: right;">-0.0642073</td>
+<td style="text-align: right;">1.8188263</td>
+<td style="text-align: right;">4.1355435</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">DBPS (e MP)</td>
+<td style="text-align: right;">-0.0208235</td>
+<td style="text-align: right;">-1.2441248</td>
+<td style="text-align: right;">-0.8091856</td>
+<td style="text-align: right;">-0.1932650</td>
+<td style="text-align: right;">1.1208650</td>
+<td style="text-align: right;">2.5603690</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">DBPS (e P)</td>
+<td style="text-align: right;">-0.4776513</td>
+<td style="text-align: right;">-0.4936499</td>
+<td style="text-align: right;">-0.6743258</td>
+<td style="text-align: right;">-0.5460880</td>
+<td style="text-align: right;">-0.2157602</td>
+<td style="text-align: right;">-0.4357232</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">CBPS (o)</td>
+<td style="text-align: right;">-0.1302798</td>
+<td style="text-align: right;">-2.9018540</td>
+<td style="text-align: right;">-1.1142175</td>
+<td style="text-align: right;">1.7326998</td>
+<td style="text-align: right;">6.0673610</td>
+<td style="text-align: right;">11.2098597</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">DBPS (o MQ)</td>
+<td style="text-align: right;">-0.0485158</td>
+<td style="text-align: right;">-1.1226613</td>
+<td style="text-align: right;">-0.6875755</td>
+<td style="text-align: right;">-0.1782599</td>
+<td style="text-align: right;">1.1199281</td>
+<td style="text-align: right;">2.9258116</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">DBPS (o MP)</td>
+<td style="text-align: right;">-0.0220312</td>
+<td style="text-align: right;">-0.7870124</td>
+<td style="text-align: right;">-0.5273513</td>
+<td style="text-align: right;">-0.0615868</td>
+<td style="text-align: right;">0.8368510</td>
+<td style="text-align: right;">1.8840983</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">DBPS (o P)</td>
+<td style="text-align: right;">0.0083574</td>
+<td style="text-align: right;">0.0238700</td>
+<td style="text-align: right;">-0.1466003</td>
+<td style="text-align: right;">-0.0089896</td>
+<td style="text-align: right;">0.3576011</td>
+<td style="text-align: right;">0.3467751</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">IPS (exp)</td>
+<td style="text-align: right;">6.8487557</td>
+<td style="text-align: right;">13.8096218</td>
+<td style="text-align: right;">9.8939291</td>
+<td style="text-align: right;">8.0500193</td>
+<td style="text-align: right;">13.4848800</td>
+<td style="text-align: right;">38.8826937</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">IPS (ind)</td>
+<td style="text-align: right;">6.4537938</td>
+<td style="text-align: right;">15.4085398</td>
+<td style="text-align: right;">11.1044114</td>
+<td style="text-align: right;">8.8529833</td>
+<td style="text-align: right;">14.4144744</td>
+<td style="text-align: right;">34.6430042</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">IPS (proj)</td>
+<td style="text-align: right;">6.6207211</td>
+<td style="text-align: right;">14.6141170</td>
+<td style="text-align: right;">10.8651504</td>
+<td style="text-align: right;">7.9916819</td>
+<td style="text-align: right;">12.8501174</td>
+<td style="text-align: right;">31.4331099</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">CBPS (e)</td>
+<td style="text-align: right;">7.7502257</td>
+<td style="text-align: right;">13.2422753</td>
+<td style="text-align: right;">9.5447927</td>
+<td style="text-align: right;">8.4143465</td>
+<td style="text-align: right;">14.5832297</td>
+<td style="text-align: right;">35.3576625</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">DBPS (e MQ)</td>
+<td style="text-align: right;">7.1256771</td>
+<td style="text-align: right;">11.2284255</td>
+<td style="text-align: right;">8.8770188</td>
+<td style="text-align: right;">8.5188770</td>
+<td style="text-align: right;">12.2347793</td>
+<td style="text-align: right;">24.3055090</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">DBPS (e MP)</td>
+<td style="text-align: right;">7.0746941</td>
+<td style="text-align: right;">12.2954204</td>
+<td style="text-align: right;">9.9443972</td>
+<td style="text-align: right;">9.2285919</td>
+<td style="text-align: right;">12.8167234</td>
+<td style="text-align: right;">25.2888074</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">DBPS (e P)</td>
+<td style="text-align: right;">6.1780838</td>
+<td style="text-align: right;">11.6075401</td>
+<td style="text-align: right;">9.7879764</td>
+<td style="text-align: right;">8.7242759</td>
+<td style="text-align: right;">12.1643885</td>
+<td style="text-align: right;">22.9389471</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">CBPS (o)</td>
+<td style="text-align: right;">7.6880929</td>
+<td style="text-align: right;">12.1805315</td>
+<td style="text-align: right;">9.4588746</td>
+<td style="text-align: right;">8.5987946</td>
+<td style="text-align: right;">15.6431324</td>
+<td style="text-align: right;">42.3916084</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">DBPS (o MQ)</td>
+<td style="text-align: right;">7.1256771</td>
+<td style="text-align: right;">10.5597209</td>
+<td style="text-align: right;">8.4340290</td>
+<td style="text-align: right;">8.1759626</td>
+<td style="text-align: right;">11.6607812</td>
+<td style="text-align: right;">23.6440111</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">DBPS (o MP)</td>
+<td style="text-align: right;">5.8066485</td>
+<td style="text-align: right;">10.7478925</td>
+<td style="text-align: right;">8.6797056</td>
+<td style="text-align: right;">8.0561380</td>
+<td style="text-align: right;">10.7196980</td>
+<td style="text-align: right;">19.8877995</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">DBPS (o P)</td>
+<td style="text-align: right;">5.4536100</td>
+<td style="text-align: right;">10.5076702</td>
+<td style="text-align: right;">8.5301164</td>
+<td style="text-align: right;">7.9813839</td>
+<td style="text-align: right;">10.8402750</td>
+<td style="text-align: right;">20.0139394</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">IPS (exp)</td>
+<td style="text-align: right;">2.6172864</td>
+<td style="text-align: right;">5.4737393</td>
+<td style="text-align: right;">3.8526741</td>
+<td style="text-align: right;">2.9246282</td>
+<td style="text-align: right;">6.3904864</td>
+<td style="text-align: right;">12.1896008</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">IPS (ind)</td>
+<td style="text-align: right;">2.5649209</td>
+<td style="text-align: right;">4.9975653</td>
+<td style="text-align: right;">3.6113043</td>
+<td style="text-align: right;">3.2067909</td>
+<td style="text-align: right;">6.3657122</td>
+<td style="text-align: right;">11.1633306</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">IPS (proj)</td>
+<td style="text-align: right;">2.5733711</td>
+<td style="text-align: right;">4.6379605</td>
+<td style="text-align: right;">3.7754773</td>
+<td style="text-align: right;">2.8613555</td>
+<td style="text-align: right;">4.0793541</td>
+<td style="text-align: right;">7.0442470</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">CBPS (e)</td>
+<td style="text-align: right;">2.7863315</td>
+<td style="text-align: right;">4.8775351</td>
+<td style="text-align: right;">3.4105548</td>
+<td style="text-align: right;">3.2639783</td>
+<td style="text-align: right;">7.0147078</td>
+<td style="text-align: right;">12.1348944</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">DBPS (e MQ)</td>
+<td style="text-align: right;">2.6698372</td>
+<td style="text-align: right;">3.6628418</td>
+<td style="text-align: right;">3.1021490</td>
+<td style="text-align: right;">2.9194177</td>
+<td style="text-align: right;">3.9424496</td>
+<td style="text-align: right;">6.4349226</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">DBPS (e MP)</td>
+<td style="text-align: right;">2.6599112</td>
+<td style="text-align: right;">3.7206541</td>
+<td style="text-align: right;">3.2556379</td>
+<td style="text-align: right;">3.0440012</td>
+<td style="text-align: right;">3.7514080</td>
+<td style="text-align: right;">5.6430751</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">DBPS (e P)</td>
+<td style="text-align: right;">2.5310540</td>
+<td style="text-align: right;">3.4425616</td>
+<td style="text-align: right;">3.2004206</td>
+<td style="text-align: right;">3.0037457</td>
+<td style="text-align: right;">3.4944157</td>
+<td style="text-align: right;">4.8092413</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">CBPS (o)</td>
+<td style="text-align: right;">2.7758000</td>
+<td style="text-align: right;">4.5388642</td>
+<td style="text-align: right;">3.2711398</td>
+<td style="text-align: right;">3.4060304</td>
+<td style="text-align: right;">7.2426516</td>
+<td style="text-align: right;">12.9635089</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">DBPS (o MQ)</td>
+<td style="text-align: right;">2.6698372</td>
+<td style="text-align: right;">3.4380357</td>
+<td style="text-align: right;">2.9844244</td>
+<td style="text-align: right;">2.8649152</td>
+<td style="text-align: right;">3.5937474</td>
+<td style="text-align: right;">5.6748907</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">DBPS (o MP)</td>
+<td style="text-align: right;">2.4097995</td>
+<td style="text-align: right;">3.3715399</td>
+<td style="text-align: right;">2.9929593</td>
+<td style="text-align: right;">2.8390017</td>
+<td style="text-align: right;">3.3793517</td>
+<td style="text-align: right;">4.8412422</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">DBPS (o P)</td>
+<td style="text-align: right;">2.3353115</td>
+<td style="text-align: right;">3.2416416</td>
+<td style="text-align: right;">2.9243133</td>
+<td style="text-align: right;">2.8251486</td>
+<td style="text-align: right;">3.3118203</td>
+<td style="text-align: right;">4.4871140</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>  <span class="co">#xtable(digits = 4) </span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Table 3</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">setnames</span>(<span class="at">x =</span> sim2<span class="sc">$</span>CVM, <span class="at">old =</span> <span class="fu">names</span>(sim2<span class="sc">$</span>CVM), <span class="at">new=</span><span class="fu">names</span>(sim2<span class="sc">$</span>KS))</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>sim2<span class="sc">$</span>CVM <span class="sc">|&gt;</span> </span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">setDT</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">melt</span>(<span class="at">id.vars =</span> <span class="st">&quot;id&quot;</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>  {\(x) x[, .(<span class="at">cvm_mean=</span><span class="fu">mean</span>(value), <span class="at">cvm_median=</span><span class="fu">median</span>(value)), .(variable)]}() <span class="sc">|&gt;</span> </span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">merge</span>(<span class="at">x =</span> _,</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>        <span class="at">y =</span> {sim2<span class="sc">$</span>KS <span class="sc">|&gt;</span> </span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>                <span class="fu">setDT</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>                <span class="fu">melt</span>(<span class="at">id.vars =</span> <span class="st">&quot;id&quot;</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>                {\(x) x[, .(<span class="at">ks_mean=</span><span class="fu">mean</span>(value), <span class="at">ks_median=</span><span class="fu">median</span>(value)), .(variable)]}() },</span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>        <span class="at">by =</span> <span class="st">&quot;variable&quot;</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transform</span>(<span class="at">variable =</span> <span class="fu">factor</span>(variable,</span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>                         <span class="fu">c</span>(<span class="st">&quot;IPS (exp)&quot;</span>, <span class="st">&quot;IPS (ind)&quot;</span>, <span class="st">&quot;IPS (proj)&quot;</span>, </span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>                           <span class="st">&quot;CPBS (e)&quot;</span>, <span class="st">&quot;CBPS (e MQ)&quot;</span>, <span class="st">&quot;CBPS (e MP)&quot;</span>, <span class="st">&quot;CPBS (e P)&quot;</span>, </span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>                           <span class="st">&quot;CBPS (o)&quot;</span>, <span class="st">&quot;CBPS (o MQ)&quot;</span>, <span class="st">&quot;CBPS (o MP)&quot;</span>, <span class="st">&quot;CPBS (o P)&quot;</span>))) <span class="co">#|&gt;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="kable-table">
+<table class="table table-sm table-striped">
+<thead>
+<tr class="header">
+<th style="text-align: left;">variable</th>
+<th style="text-align: right;">cvm_mean</th>
+<th style="text-align: right;">cvm_median</th>
+<th style="text-align: right;">ks_mean</th>
+<th style="text-align: right;">ks_median</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">IPS (ind)</td>
+<td style="text-align: right;">0.2754108</td>
+<td style="text-align: right;">0.2589870</td>
+<td style="text-align: right;">2.291843</td>
+<td style="text-align: right;">2.215846</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">IPS (exp)</td>
+<td style="text-align: right;">0.3679096</td>
+<td style="text-align: right;">0.3436676</td>
+<td style="text-align: right;">2.611714</td>
+<td style="text-align: right;">2.499083</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">IPS (proj)</td>
+<td style="text-align: right;">0.7469043</td>
+<td style="text-align: right;">0.5265633</td>
+<td style="text-align: right;">3.329818</td>
+<td style="text-align: right;">3.084386</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">CPBS (e)</td>
+<td style="text-align: right;">0.4014788</td>
+<td style="text-align: right;">0.3658024</td>
+<td style="text-align: right;">2.714072</td>
+<td style="text-align: right;">2.670370</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">CBPS (o)</td>
+<td style="text-align: right;">0.4141130</td>
+<td style="text-align: right;">0.3868337</td>
+<td style="text-align: right;">2.777704</td>
+<td style="text-align: right;">2.734206</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">CBPS (e MQ)</td>
+<td style="text-align: right;">0.2794656</td>
+<td style="text-align: right;">0.2442205</td>
+<td style="text-align: right;">2.104257</td>
+<td style="text-align: right;">2.054387</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">CBPS (o MQ)</td>
+<td style="text-align: right;">0.2631555</td>
+<td style="text-align: right;">0.2246189</td>
+<td style="text-align: right;">2.063521</td>
+<td style="text-align: right;">2.008532</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">CBPS (e MP)</td>
+<td style="text-align: right;">0.3156045</td>
+<td style="text-align: right;">0.2677808</td>
+<td style="text-align: right;">2.068462</td>
+<td style="text-align: right;">1.996108</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">CBPS (o MP)</td>
+<td style="text-align: right;">0.2629025</td>
+<td style="text-align: right;">0.2251768</td>
+<td style="text-align: right;">1.993147</td>
+<td style="text-align: right;">1.956149</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">CPBS (e P)</td>
+<td style="text-align: right;">0.3103047</td>
+<td style="text-align: right;">0.2639396</td>
+<td style="text-align: right;">2.106767</td>
+<td style="text-align: right;">2.063467</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">CPBS (o P)</td>
+<td style="text-align: right;">0.2648049</td>
+<td style="text-align: right;">0.2230596</td>
+<td style="text-align: right;">1.988189</td>
+<td style="text-align: right;">1.942606</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>  <span class="do">## uncomment for xtable</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">#xtable() </span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Table A4 in the Appendix</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">setnames</span>(<span class="at">x =</span> sim1<span class="sc">$</span>CVM, <span class="at">old =</span> <span class="fu">names</span>(sim1<span class="sc">$</span>CVM), <span class="at">new=</span><span class="fu">names</span>(sim1<span class="sc">$</span>KS))</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>sim1<span class="sc">$</span>CVM <span class="sc">|&gt;</span> </span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">setDT</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">melt</span>(<span class="at">id.vars =</span> <span class="st">&quot;id&quot;</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>  {\(x) x[, .(<span class="at">cvm_mean=</span><span class="fu">mean</span>(value), <span class="at">cvm_median=</span><span class="fu">median</span>(value)), .(variable)]}() <span class="sc">|&gt;</span> </span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">merge</span>(<span class="at">x =</span> _,</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>        <span class="at">y =</span> {sim2<span class="sc">$</span>KS <span class="sc">|&gt;</span> </span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>                <span class="fu">setDT</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>                <span class="fu">melt</span>(<span class="at">id.vars =</span> <span class="st">&quot;id&quot;</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>                {\(x) x[, .(<span class="at">ks_mean=</span><span class="fu">mean</span>(value), <span class="at">ks_median=</span><span class="fu">median</span>(value)), .(variable)]}() },</span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>        <span class="at">by =</span> <span class="st">&quot;variable&quot;</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transform</span>(<span class="at">variable =</span> <span class="fu">factor</span>(variable,</span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>                         <span class="fu">c</span>(<span class="st">&quot;IPS (exp)&quot;</span>, <span class="st">&quot;IPS (ind)&quot;</span>, <span class="st">&quot;IPS (proj)&quot;</span>, </span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>                           <span class="st">&quot;CPBS (e)&quot;</span>, <span class="st">&quot;CBPS (e MQ)&quot;</span>, <span class="st">&quot;CBPS (e MP)&quot;</span>, <span class="st">&quot;CPBS (e P)&quot;</span>, </span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>                           <span class="st">&quot;CBPS (o)&quot;</span>, <span class="st">&quot;CBPS (o MQ)&quot;</span>, <span class="st">&quot;CBPS (o MP)&quot;</span>, <span class="st">&quot;CPBS (o P)&quot;</span>))) <span class="co">#|&gt;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="kable-table">
+<table class="table table-sm table-striped">
+<thead>
+<tr class="header">
+<th style="text-align: left;">variable</th>
+<th style="text-align: right;">cvm_mean</th>
+<th style="text-align: right;">cvm_median</th>
+<th style="text-align: right;">ks_mean</th>
+<th style="text-align: right;">ks_median</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">IPS (ind)</td>
+<td style="text-align: right;">0.1504595</td>
+<td style="text-align: right;">0.1462049</td>
+<td style="text-align: right;">2.291843</td>
+<td style="text-align: right;">2.215846</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">IPS (exp)</td>
+<td style="text-align: right;">0.2044340</td>
+<td style="text-align: right;">0.1908611</td>
+<td style="text-align: right;">2.611714</td>
+<td style="text-align: right;">2.499083</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">IPS (proj)</td>
+<td style="text-align: right;">0.2044888</td>
+<td style="text-align: right;">0.1914681</td>
+<td style="text-align: right;">3.329818</td>
+<td style="text-align: right;">3.084386</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">CPBS (e)</td>
+<td style="text-align: right;">0.2152213</td>
+<td style="text-align: right;">0.2031205</td>
+<td style="text-align: right;">2.714072</td>
+<td style="text-align: right;">2.670370</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">CBPS (o)</td>
+<td style="text-align: right;">0.2125964</td>
+<td style="text-align: right;">0.1956512</td>
+<td style="text-align: right;">2.777704</td>
+<td style="text-align: right;">2.734206</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">CBPS (e MQ)</td>
+<td style="text-align: right;">0.1873466</td>
+<td style="text-align: right;">0.1738329</td>
+<td style="text-align: right;">2.104257</td>
+<td style="text-align: right;">2.054387</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">CBPS (o MQ)</td>
+<td style="text-align: right;">0.1992326</td>
+<td style="text-align: right;">0.1781268</td>
+<td style="text-align: right;">2.063521</td>
+<td style="text-align: right;">2.008532</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">CBPS (e MP)</td>
+<td style="text-align: right;">0.1836849</td>
+<td style="text-align: right;">0.1708436</td>
+<td style="text-align: right;">2.068462</td>
+<td style="text-align: right;">1.996108</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">CBPS (o MP)</td>
+<td style="text-align: right;">0.2247983</td>
+<td style="text-align: right;">0.2067469</td>
+<td style="text-align: right;">1.993147</td>
+<td style="text-align: right;">1.956149</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">CPBS (e P)</td>
+<td style="text-align: right;">0.1822637</td>
+<td style="text-align: right;">0.1687717</td>
+<td style="text-align: right;">2.106767</td>
+<td style="text-align: right;">2.063467</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">CPBS (o P)</td>
+<td style="text-align: right;">0.2283130</td>
+<td style="text-align: right;">0.2076597</td>
+<td style="text-align: right;">1.988189</td>
+<td style="text-align: right;">1.942606</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>  <span class="do">## uncomment for xtable</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># xtable()</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 

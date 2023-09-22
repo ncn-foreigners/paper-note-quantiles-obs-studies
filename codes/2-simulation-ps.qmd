@@ -1,41 +1,42 @@
 ---
-title: "2-ps-sim"
-format: html
+title: "Simulation for the covariate balancing propensity score (CBPS)"
+author: "Maciej Beręsewicz"
+format: 
+  html:
+    self-contained: true
+    table-of-contents: true
+    number-sections: true
+    df-print: kable
+editor: source
+execute: 
+  eval: false
+  warning: false
+  message: false
+toc-title: Contents
+lang: en
 ---
 
-# Install required packages
+# Load packages
 
-Install packages according using the following codes
-
-```{r installation, eval = FALSE}
-install.packages("remotes")
-remotes::install_github("ncn-foreigners/jointCalib@dev")
-remotes::install_github("ncn-foreigners/nonprobsvy")
-remotes::install_github("pedrohcgs/IPS")
-```
-
-
-# Load required packages
-
-Load required packages and functions 
-
+Load required packages
 ```{r}
 library(nonprobsvy)
 library(jointCalib)
 library(IPS)
 library(CBPS)
-library(ebal)
 library(glue)
 library(data.table)
 ```
 
-Functions taken from
+Functions taken from [Sant'Anna et al. (2022)](https://onlinelibrary.wiley.com/doi/10.1002/jae.2909) paper.
 
 ```{r}
 source("functions.R")
 ```
 
-Simulation gen 1
+# Simulations
+
+Simulation 1 -- correctly specified model
 
 ```{r}
 reps <- 500
@@ -45,11 +46,11 @@ results <- matrix(0, nrow = reps, ncol = est)
 results_qte <- matrix(0, nrow = reps, ncol = est*5)
 results_ks <- matrix(0, nrow = reps, ncol = est)
 results_cvm <- matrix(0, nrow = reps, ncol = est)
-colnames(results_ks) <- colnames(results_ks) <- colnames(results) <- c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
-                                                                     "CPBS (e)", "CBPS (o)",
-                                                                     "CBPS (e MQ)", "CBPS (o MQ)", 
-                                                                     "CBPS (e MP)",  "CBPS (o MP)",
-                                                                     "CPBS (e P)", "CPBS (o P)")
+colnames(results_cvm) <- colnames(results_ks) <- colnames(results) <- c("IPS (ind)",  "IPS (exp)", "IPS (proj)", 
+                                                                      "CPBS (e)", "CBPS (o)",
+                                                                      "CBPS (e MQ)", "CBPS (o MQ)", 
+                                                                      "CBPS (e MP)",  "CBPS (o MP)",
+                                                                      "CPBS (e P)", "CPBS (o P)")
 probs1 <- seq(0.25, 0.75, 0.25)
 probs2 <- seq(0.1, 0.9, 0.1)
 tau <- c(0.10, 0.25, 0.5, 0.75, 0.9)
@@ -340,8 +341,8 @@ for (i in 1:reps) {
                    ate_cbps3$ate, ate_cbps3_o$ate,
                    ate_cbps4$ate, ate_cbps4_o$ate)
   results_qte[i, ] <- c(qte_IPS_ind$qte,
-                       qte_IPS_exp$qte,
-                       qte_IPS_proj$qte,
+                        qte_IPS_exp$qte,
+                        qte_IPS_proj$qte,
                        qte_cbps$qte, qte_cbps_o$qte,
                        qte_cbps2$qte, qte_cbps2_o$qte,
                        qte_cbps3$qte, qte_cbps3_o$qte,
@@ -354,18 +355,19 @@ for (i in 1:reps) {
 ```
 
 
-Gen 2
+Simulation 2 -- mis-specified model
+
 
 ```{r}
 results2 <- matrix(0, nrow = reps, ncol = est)
 results2_qte <- matrix(0, nrow = reps, ncol = est*5)
 results2_ks <- matrix(0, nrow = reps, ncol = est)
 results2_cvm <- matrix(0, nrow = reps, ncol = est)
-colnames(results2_ks) <- colnames(results2_ks) <- colnames(results2) <- c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
-                                                                     "CPBS (e)", "CBPS (o)",
-                                                                     "CBPS (e MQ)", "CBPS (o MQ)", 
-                                                                     "CBPS (e MP)",  "CBPS (o MP)",
-                                                                     "CPBS (e P)", "CPBS (o P)")
+colnames(results2_cvm) <- colnames(results2_ks) <- colnames(results2) <- c("IPS (ind)",  "IPS (exp)", "IPS (proj)", 
+                                                                      "CPBS (e)", "CBPS (o)",
+                                                                      "CBPS (e MQ)", "CBPS (o MQ)", 
+                                                                      "CBPS (e MP)",  "CBPS (o MP)",
+                                                                      "CPBS (e P)", "CPBS (o P)")
 
 for (i in 1:reps) {
   set.seed(2023 + i)
@@ -415,7 +417,7 @@ for (i in 1:reps) {
                           fit.ind$lin.rep)
   
   
-  suppressWarnings(qte_IPS_exp <- IPS::QTE(data_sim1$Y, 
+  suppressWarnings(qte_IPS_ind <- IPS::QTE(data_sim1$Y, 
                                            data_sim1$Treat, xcov, 
                                            fit.ind$fitted.values,
                                            fit.ind$lin.rep, tau, bw = bw))
@@ -433,7 +435,7 @@ for (i in 1:reps) {
   
   
   suppressWarnings(qte_IPS_exp <- IPS::QTE(data_sim1$Y, data_sim1$Treat, xcov, fit.exp$fitted.values,
-                          fit.exp$lin.rep, tau, bw = bw))
+                                           fit.exp$lin.rep, tau, bw = bw))
   
   ## proj 
   fit.proj <- IPS::IPS_proj(d = data_sim1$Treat,
@@ -662,10 +664,14 @@ for (i in 1:reps) {
   results2_cvm[i, ] <- cvm_tests
   results2_ks[i, ] <- ks_tests
 }
-
 ```
 
+
+Processing results
+
 ```{r}
+## processing results  - 1
+
 results_qte_df <- results_qte |> as.data.frame()
 names(results_qte_df) <- paste0(rep(colnames(results), 
                                   each = 5), "_", 1:5)
@@ -689,20 +695,44 @@ results2_qte_df[, c("est", "quant") := tstrsplit(variable, "_")]
 results2_qte_df[, est:=factor(est, colnames(results2))]
 ```
 
+Save results to RDS file
+
 ```{r}
-## save results
-saveRDS(list(ATE = cbind(id=1:reps,as.data.frame(results)),
+sim1 <- list(ATE = cbind(id=1:reps,as.data.frame(results)),
              QTE = results_qte_df,
              CVM = cbind(id=1:reps,as.data.frame(results_cvm)),
-             KS = cbind(id=1:reps,as.data.frame(results_ks))),
-        file = "../results/sim2-dgp1-1000.rds")
+             KS = cbind(id=1:reps,as.data.frame(results_ks)))
 
-saveRDS(list(ATE = cbind(id=1:reps,as.data.frame(results2)),
+sim2 <- list(ATE = cbind(id=1:reps,as.data.frame(results2)),
              QTE = results2_qte_df,
              CVM = cbind(id=1:reps,as.data.frame(results2_cvm)),
-             KS = cbind(id=1:reps,as.data.frame(results2_ks))),
-        file = "../results/sim2-dgp2-1000.rds")
+             KS = cbind(id=1:reps,as.data.frame(results2_ks)))
 ```
 
+```{r}
+saveRDS(sim1, file = "../results/sim2-dgp1-1000.rds")
+saveRDS(sim2, file = "../results/sim2-dgp2-1000.rds")
+```
+
+Save results to CSV
+
+```{r}
+fwrite(sim1$ATE, file = "../results/sim2-dgp1-1000-ate.csv")
+fwrite(sim1$QTE, file = "../results/sim2-dgp1-1000-qte.csv")
+fwrite(sim1$CVM, file = "../results/sim2-dgp1-1000-cvm.csv")
+fwrite(sim1$KS,  file = "../results/sim2-dgp1-1000-ks.csv")
+
+fwrite(sim2$ATE, file = "../results/sim2-dgp2-1000-ate.csv")
+fwrite(sim2$QTE, file = "../results/sim2-dgp2-1000-qte.csv")
+fwrite(sim2$CVM, file = "../results/sim2-dgp2-1000-cvm.csv")
+fwrite(sim2$KS,  file = "../results/sim2-dgp2-1000-ks.csv")
+
+names_files1 <- list.files("../results", full.names = TRUE, pattern = "sim2-dgp1-1000-.+.csv")
+zip(zipfile =  "../results/sim2-dgp1-1000.zip", files = names_files1)
+names_files2 <- list.files("../results", full.names = TRUE, pattern = "sim2-dgp2-1000-.+.csv")
+zip(zipfile =  "../results/sim2-dgp2-1000.zip", files = names_files2)
+
+file.remove(c(names_files1, names_files2))
+```
 
 

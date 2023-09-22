@@ -16,14 +16,6 @@ toc-title: Contents
 lang: en
 ---
 
-# Install packages
-
-Install relevant packages for the paper. The `jointCalib` package is available at CRAN but we install the package from github (development version)
-
-```{r install-package}
-#install.packages(c("remotes", "ebal", "mvnfast", "data.table", "ggplot2", "laeken"))
-remotes::install_github("ncn-foreigners/jointCalib@dev")
-```
 
 # Load packages
 
