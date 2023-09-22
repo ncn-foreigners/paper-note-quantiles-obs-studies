@@ -232,5 +232,69 @@ sim1$CVM |>
   # xtable()
 ```
 
+Boxplots for highlights
 
+Simulation 1
+
+```{r}
+# id, variable, value, est
+sim1$ATE |> 
+  melt(id.vars = "id", variable.name = "est") |> 
+  transform(par = "ATE",
+            quant = "") |> 
+  rbind(
+    sim1$QTE |> 
+      subset(select = -variable) |> 
+      transform(par = "QTE")
+  ) |> 
+  transform(quant = factor(quant, 
+                           c("", "1", "2", "3", "4", "5"),
+                           c("ATE", "QTE(0.10)", "QTE(0.25)", "QTE(0.50)", "QTE(0.75)", "QTE(0.90)")),
+            est = factor(est,
+                         c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
+                           "CPBS (e)", "CBPS (e MQ)", "CBPS (e MP)", "CPBS (e P)", 
+                           "CBPS (o)", "CBPS (o MQ)", "CBPS (o MP)", "CPBS (o P)"),
+                         c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
+                           "CBPS (e)", "DBPS (e MQ)", "DBPS (e MP)", "DBPS (e P)", 
+                           "CBPS (o)", "DBPS (o MQ)", "DBPS (o MP)", "DBPS (o P)"))) |> 
+  ggplot(data = _, aes(x = est, y = value)) +
+  geom_boxplot() +
+  facet_wrap(~quant, nrow = 1) +
+  theme(axis.text.x = element_text(angle = 45, vjust=1,hjust=1, size = 6)) +
+  geom_hline(yintercept = 10, color = "red", linetype="dashed") +
+  labs(x = "Method", y = "Value", title = "Design 1: correctly specified models") -> p1
+
+ggsave(plot = p1, filename = glue("../results/fig-sim-2-dbps-design-1.png"), width = 7, height = 5)
+```
+Simulation 2 
+
+```{r}
+sim2$ATE |> 
+  melt(id.vars = "id", variable.name = "est") |> 
+  transform(par = "ATE",
+            quant = "") |> 
+  rbind(
+    sim2$QTE |> 
+      subset(select = -variable) |> 
+      transform(par = "QTE")
+  ) |> 
+  transform(quant = factor(quant, 
+                           c("", "1", "2", "3", "4", "5"),
+                           c("ATE", "QTE(0.10)", "QTE(0.25)", "QTE(0.50)", "QTE(0.75)", "QTE(0.90)")),
+            est = factor(est,
+                         c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
+                           "CPBS (e)", "CBPS (e MQ)", "CBPS (e MP)", "CPBS (e P)", 
+                           "CBPS (o)", "CBPS (o MQ)", "CBPS (o MP)", "CPBS (o P)"),
+                         c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
+                           "CBPS (e)", "DBPS (e MQ)", "DBPS (e MP)", "DBPS (e P)", 
+                           "CBPS (o)", "DBPS (o MQ)", "DBPS (o MP)", "DBPS (o P)"))) |> 
+  ggplot(data = _, aes(x = est, y = value)) +
+  geom_boxplot() +
+  facet_wrap(~quant, nrow = 1) +
+  theme(axis.text.x = element_text(angle = 45, vjust=1,hjust=1, size = 6)) +
+  geom_hline(yintercept = 10, color = "red", linetype="dashed") +
+  labs(x = "Method", y = "Value", title = "Design 2: mis-specified models") -> p2
+
+ggsave(plot = p2, filename = glue("../results/fig-sim-2-dbps-design-2.png"), width = 7, height = 5)
+```
 

@@ -6,11 +6,7 @@
 This work was financed by the National Science Centre in Poland, OPUS 22
 grant no. 2020/39/B/HS4/00941.
 
-# Tutorial for the `jointCalib` package
-
-# Highlights
-
-# Reporduction of the results
+# Reproduction of the results
 
 ## Setup
 
@@ -32,6 +28,20 @@ remotes::install_github("pedrohcgs/IPS")
   - [simulation 1
     (EB)](https://htmlpreview.github.io/?https://raw.githubusercontent.com/ncn-foreigners/paper-note-quantiles-obs-studies/main/codes/1-simulation-eb.html),
   - [simulation 2
-    (CBPS)](https://htmlpreview.github.io/?https://raw.githubusercontent.com/ncn-foreigners/paper-note-quantiles-obs-studies/main/codes/1-simulation-ps.html)
-  - [processing results for the paper]()
+    (CBPS)](https://htmlpreview.github.io/?https://raw.githubusercontent.com/ncn-foreigners/paper-note-quantiles-obs-studies/main/codes/2-simulation-ps.html)
+  - [processing results for the
+    paper](https://htmlpreview.github.io/?https://raw.githubusercontent.com/ncn-foreigners/paper-note-quantiles-obs-studies/main/codes/3-report-results-mc.html)
 - Simulation results may be found in folder `results/`
+- Tutorial for [the `jointCalib` package]()
+- Codes for the proposed method in [`Stata` and `Python`]()
+
+## Highlights
+
+### Results for the distributional entropy balancing (DEB)
+
+![](results/fig-sim-1-ebal-boxplot.png)
+
+### Results for the distribution balancing propensity score (DBPS)
+
+![](results/fig-sim-2-dbps-design-1.png)
+![](results/fig-sim-2-dbps-design-2.png)
