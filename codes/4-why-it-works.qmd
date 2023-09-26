@@ -1,0 +1,234 @@
+---
+title: "Visualisation why it works"
+author: "Maciej Beręsewicz"
+format: 
+  html:
+    self-contained: true
+    table-of-contents: true
+    number-sections: true
+    df-print: kable
+editor: source
+execute: 
+  eval: false
+  warning: false
+  message: false
+toc-title: Contents
+lang: en
+---
+
+# Example
+
+Example based on entropy balancing but it applies for CBPS as well
+
+Load the packages
+```{r}
+library(jointCalib)
+library(mvnfast)
+library(data.table)
+library(ggplot2)
+library(ggpubr)
+```
+
+Small simulation using replicate function
+
+```{r}
+set.seed(2023)
+n <- 2000 ## initial sample size
+n_sample <- 1000 ## required sample size n_0=n_1=n (#n control = #n treatment)
+mu <- c(0, 0, 0) 
+Sigma <- matrix(c(2, 1, -1,
+                  1, 1, -0.5,
+                  -1,-0.5, 1), 
+                nrow=3, 
+                ncol=3)
+
+result_sim <- replicate(n = 500, simplify = FALSE, expr = {
+  
+  models1 <- lapply(c("y1", "y2", "y3"), function(y) {
+        x123 <- rmvn(n=n, mu=mu, sigma=Sigma)
+        x1 <- x123[, 1]
+        x2 <- x123[, 2]
+        x3 <- x123[, 3]
+        x4 <- runif(n, -3, 3)
+        x5 <- rchisq(n, 1)
+        x6 <- rbinom(n, 1, 0.5)
+        ep1 <- rnorm(n, 0, 30)
+        ep2 <- rnorm(n, 0, 100)
+        ep3 <- rchisq(n, 5)
+        ep3 <- ((ep3 - mean(ep3)) / sd(ep3)) * sqrt(67.6) + 0.5
+        d1 <- as.numeric((x1 + 2 * x2 - 2 * x3 - x4 - 0.5 * x5 + x6 + ep1) > 0)
+        d2 <- as.numeric((x1 + 2 * x2 - 2 * x3 - x4 - 0.5 * x5 + x6 + ep2) > 0)
+        d3 <- as.numeric((x1 + 2 * x2 - 2 * x3 - x4 - 0.5 * x5 + x6 + ep3) > 0)
+        eta <- rnorm(n)
+        y1 <- x1 + x2 + x3 - x4 + x5 + x6 + eta
+        y2 <- x1 + x2 + 0.2 * x3 * x4 - sqrt(x5) + eta
+        y3 <- (x1 + x2 + x5) ^ 2 + eta
+        df <- data.frame(id = 1:n, x1, x2, x3, x4, x5, x6, d1, d2, d3, y1, y2, y3) |> setDT()
+        df_long <-melt(df,id.vars = c(1:7, 11:13),value.name = "treatment",variable.name = "design")
+        df_long <- df_long[, .SD[sample(.N, n_sample, replace = T)], by = .(design, treatment)]
+        des_res <- list()
+        for (des in c("d1", "d2", "d3")) {
+          df_long_des <- df_long[design == des]
+          m1_mq <- joint_calib_att(formula_means = ~ x1 + x2 + x3 + x4 + x5 + x6,
+                                   formula_quantiles = ~ x1 + x2 + x3 + x4 + x5,
+                                   treatment = ~ treatment,
+                                   data = as.data.frame(df_long_des),
+                                   method = "eb")
+          m1_md <- joint_calib_att(formula_means = ~ x1 + x2 + x3 + x4 + x5 + x6,
+                                   formula_quantiles = ~ x1 + x2 + x3 + x4 + x5,
+                                   treatment = ~ treatment,
+                                   data = as.data.frame(df_long_des),
+                                   probs = seq(0.1, 0.9, 0.1),
+                                   method = "eb")
+        
+          m1 <- lm.fit(x = cbind(1, m1_mq$Xs[, paste0("x", 1:6)]), 
+                                             y = as.matrix(df_long_des[treatment == 0, ..y]))
+          m2 <- lm.fit(x = m1_mq$Xs[, 1:16], y = as.matrix(df_long_des[treatment == 0, ..y]))
+          m3 <- lm.fit(x = m1_mq$Xs,         y = as.matrix(df_long_des[treatment == 0, ..y]))
+          m4 <- lm.fit(x = m1_md$Xs[, 1:46], y = as.matrix(df_long_des[treatment == 0, ..y]))
+          m5 <- lm.fit(x = m1_md$Xs,         y = as.matrix(df_long_des[treatment == 0, ..y]))
+          des_res[[des]] <- data.frame(id = 1:nrow(m1_mq$Xs),
+                                       y = unname(as.matrix(df_long_des[treatment == 0, ..y])),
+                                       m1 = m1$fitted.values,
+                                       m2 = m2$fitted.values,
+                                       m3 = m3$fitted.values,
+                                       m4 = m4$fitted.values,
+                                       m5 = m5$fitted.values)
+        }
+          rbindlist(des_res, idcol = "design")
+        })
+  names(models1) <- c("y1", "y2", "y3")
+  models1_df <- rbindlist(models1, idcol = "group") |> melt(id.vars = c("group", "id", "y", "design"))
+  models1_df[, .(r=cor(y, value)), .(group, design, variable)]
+}
+)
+
+```
+
+Bind results into one data.frame
+
+```{r}
+result_sim_df <- rbindlist(result_sim, idcol = "rep")
+```
+
+```{r}
+saveRDS(result_sim_df, file = "../results/sim-3-why-it-works-eb.R")
+```
+
+```{r}
+head(result_sim_df)
+```
+```{r}
+result_sim_df |> 
+  transform(variable = factor(variable, paste0("m",1:5),
+                              c("Y | X",  "Y | A_q", "Y | X, A_q","Y | A_d", "Y | X, A_d")),
+            group = factor(group, c("y1", "y2", "y3"),
+                           c("Y1 (lin)", "Y2 (med nonlin)", "Y3 (str nonlin)"))) |> 
+ggplot(data = , aes(x = group, y = r, fill = variable)) +
+  geom_violin(scale = "width", draw_quantiles = c(0.25,0.5,0.75)) + 
+  facet_wrap(~design, ncol = 3,
+             labeller = labeller(design = c("d1" = "D1: strong, normal", 
+                                            "d2" = "D2: weak, normal",
+                                            "d3" = "D3: medium, lepto"))) +
+  scale_fill_brewer(palette = "RdYlBu") +
+  theme(axis.text.x = element_text(angle = 45, vjust= 1,hjust=1)) +
+  labs(x = "Y", y = "Pearson correlation coef", fill = "Model for Y") +
+  scale_y_continuous(limits = c(0, 1))  -> p1
+p1
+```
+```{r}
+ggsave(plot = p1, filename = "../results/fig-sim-3-pearson.png", width = 7, height = 5)
+```
+
+Visualisation for one simulation
+
+
+```{r}
+set.seed(2023)
+models1 <- lapply(c("y1", "y2", "y3"), function(y) {
+        x123 <- rmvn(n=n, mu=mu, sigma=Sigma)
+        x1 <- x123[, 1]
+        x2 <- x123[, 2]
+        x3 <- x123[, 3]
+        x4 <- runif(n, -3, 3)
+        x5 <- rchisq(n, 1)
+        x6 <- rbinom(n, 1, 0.5)
+        ep1 <- rnorm(n, 0, 30)
+        ep2 <- rnorm(n, 0, 100)
+        ep3 <- rchisq(n, 5)
+        ep3 <- ((ep3 - mean(ep3)) / sd(ep3)) * sqrt(67.6) + 0.5
+        d1 <- as.numeric((x1 + 2 * x2 - 2 * x3 - x4 - 0.5 * x5 + x6 + ep1) > 0)
+        d2 <- as.numeric((x1 + 2 * x2 - 2 * x3 - x4 - 0.5 * x5 + x6 + ep2) > 0)
+        d3 <- as.numeric((x1 + 2 * x2 - 2 * x3 - x4 - 0.5 * x5 + x6 + ep3) > 0)
+        eta <- rnorm(n)
+        y1 <- x1 + x2 + x3 - x4 + x5 + x6 + eta
+        y2 <- x1 + x2 + 0.2 * x3 * x4 - sqrt(x5) + eta
+        y3 <- (x1 + x2 + x5) ^ 2 + eta
+        df <- data.frame(id = 1:n, x1, x2, x3, x4, x5, x6, d1, d2, d3, y1, y2, y3) |> setDT()
+        df_long <-melt(df,id.vars = c(1:7, 11:13),value.name = "treatment",variable.name = "design")
+        df_long <- df_long[, .SD[sample(.N, n_sample, replace = T)], by = .(design, treatment)]
+        des_res <- list()
+        for (des in c("d1", "d2", "d3")) {
+          df_long_des <- df_long[design == des]
+          m1_mq <- joint_calib_att(formula_means = ~ x1 + x2 + x3 + x4 + x5 + x6,
+                                   formula_quantiles = ~ x1 + x2 + x3 + x4 + x5,
+                                   treatment = ~ treatment,
+                                   data = as.data.frame(df_long_des),
+                                   method = "eb")
+          m1_md <- joint_calib_att(formula_means = ~ x1 + x2 + x3 + x4 + x5 + x6,
+                                   formula_quantiles = ~ x1 + x2 + x3 + x4 + x5,
+                                   treatment = ~ treatment,
+                                   data = as.data.frame(df_long_des),
+                                   probs = seq(0.1, 0.9, 0.1),
+                                   method = "eb")
+        
+          m1 <- lm.fit(x = cbind(1, m1_mq$Xs[, paste0("x", 1:6)]), 
+                                             y = as.matrix(df_long_des[treatment == 0, ..y]))
+          m2 <- lm.fit(x = m1_mq$Xs[, 1:16], y = as.matrix(df_long_des[treatment == 0, ..y]))
+          m3 <- lm.fit(x = m1_mq$Xs,         y = as.matrix(df_long_des[treatment == 0, ..y]))
+          m4 <- lm.fit(x = m1_md$Xs[, 1:46], y = as.matrix(df_long_des[treatment == 0, ..y]))
+          m5 <- lm.fit(x = m1_md$Xs,         y = as.matrix(df_long_des[treatment == 0, ..y]))
+          des_res[[des]] <- data.frame(id = 1:nrow(m1_mq$Xs),
+                                       y = unname(as.matrix(df_long_des[treatment == 0, ..y])),
+                                       m1 = m1$fitted.values,
+                                       m2 = m2$fitted.values,
+                                       m3 = m3$fitted.values,
+                                       m4 = m4$fitted.values,
+                                       m5 = m5$fitted.values)
+        }
+          rbindlist(des_res, idcol = "design")
+        })
+names(models1) <- c("y1", "y2", "y3")
+models1_df <- rbindlist(models1, idcol = "group") |> melt(id.vars = c("group", "id", "y", "design"))
+```
+
+```{r}
+ggplot(data = models1_df[group == "y3"], aes(x = y, y = value)) +
+  geom_point(shape = 1, alpha = 0.5) +
+  facet_grid(design ~ variable,
+             labeller = labeller(group = c("y1" = "Y1 (lin)", 
+                                           "y2" = "Y2 (med nonlin)",
+                                           "y3" = "Y3 (str nonlin)"),
+                                 variable = c("m1" = "Y | X",
+                                              "m2" = "Y | A_q",
+                                              "m3" = "Y | X, A_q",
+                                              "m4" = "Y | A_d",
+                                              "m5" = "Y | X, A_d"),
+                                 design = c("d1" = "D1: strong, normal", 
+                                            "d2" = "D2: weak, normal",
+                                            "d3" = "D3: medium, lepto"))) +
+  stat_cor(aes(label = ..r.label..),
+           cor.coef.name = c("R"), 
+           method = "p",
+           r.accuracy = 0.01, 
+           label.x.npc = "center", label.y.npc = "top") +
+  labs(x = "Y observed", y = "Y predicted", 
+       title = "Scatter plots for Y3 (strong nonlinearity)") +
+  scale_y_continuous(limits = c(-20, 170)) +
+  scale_x_continuous(limits = c(-20, 170)) -> p2
+```
+
+```{r}
+ggsave(plot = p2, filename = "../results/fig-sim-3-scatter.png", width = 7, height = 5)
+```
+
