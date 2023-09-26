@@ -49,7 +49,14 @@ remotes::install_github("pedrohcgs/IPS")
 ### Results for the distribution balancing propensity score (DBPS)
 
 ![](results/fig-sim-2-dbps-design-1.png)
-![](results/fig-sim-2-dbps-design-2.png) \### Why it works?
+![](results/fig-sim-2-dbps-design-2.png)
+
+### Why it works?
+
+Including quartiles ($A_q$) and deciles ($A_d$) along with X makes the
+relationship more linear and thus improves the estimates as EB and CBPS
+assumes linear relationship between Y and calibration / balance
+variables.
 
 ![](results/fig-sim-3-pearson.png)
 
