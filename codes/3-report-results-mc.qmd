@@ -152,8 +152,8 @@ sim2$ATE |>
                            "CPBS (e)", "CBPS (e MQ)", "CBPS (e MP)", "CPBS (e P)", 
                            "CBPS (o)", "CBPS (o MQ)", "CBPS (o MP)", "CPBS (o P)"),
                          c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
-                           "CBPS (e)", "DBPS (e MQ)", "DBPS (e MP)", "DBPS (e P)", 
-                           "CBPS (o)", "DBPS (o MQ)", "DBPS (o MP)", "DBPS (o P)"))) -> sim2_results2
+                           "CBPS (e)", "DBPS (e MQ)", "DBPS (e MD)", "DBPS (e D)", 
+                           "CBPS (o)", "DBPS (o MQ)", "DBPS (o MD)", "DBPS (o D)"))) -> sim2_results2
 
 sim2_results2 |>
   dcast(variable + est ~ quant, value.var = "value") |>
@@ -182,8 +182,8 @@ sim1$ATE |>
                            "CPBS (e)", "CBPS (e MQ)", "CBPS (e MP)", "CPBS (e P)", 
                            "CBPS (o)", "CBPS (o MQ)", "CBPS (o MP)", "CPBS (o P)"),
                          c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
-                           "CBPS (e)", "DBPS (e MQ)", "DBPS (e MP)", "DBPS (e P)", 
-                           "CBPS (o)", "DBPS (o MQ)", "DBPS (o MP)", "DBPS (o P)")))-> sim2_results1
+                           "CBPS (e)", "DBPS (e MQ)", "DBPS (e MD)", "DBPS (e D)", 
+                           "CBPS (o)", "DBPS (o MQ)", "DBPS (o MD)", "DBPS (o D)")))-> sim2_results1
 
 sim2_results1 |> 
   dcast(variable + est ~ quant, value.var = "value") |>
@@ -212,8 +212,8 @@ sim2$CVM |>
                            "CPBS (e)", "CBPS (e MQ)", "CBPS (e MP)", "CPBS (e P)", 
                            "CBPS (o)", "CBPS (o MQ)", "CBPS (o MP)", "CPBS (o P)"),
                          c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
-                           "CBPS (e)", "DBPS (e MQ)", "DBPS (e MP)", "DBPS (e P)", 
-                           "CBPS (o)", "DBPS (o MQ)", "DBPS (o MP)", "DBPS (o P)"))) #|>
+                           "CBPS (e)", "DBPS (e MQ)", "DBPS (e MD)", "DBPS (e D)", 
+                           "CBPS (o)", "DBPS (o MQ)", "DBPS (o MD)", "DBPS (o D)"))) #|>
   ## uncomment for xtable
   #xtable() 
 ```
@@ -238,8 +238,8 @@ sim1$CVM |>
                            "CPBS (e)", "CBPS (e MQ)", "CBPS (e MP)", "CPBS (e P)", 
                            "CBPS (o)", "CBPS (o MQ)", "CBPS (o MP)", "CPBS (o P)"),
                          c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
-                           "CBPS (e)", "DBPS (e MQ)", "DBPS (e MP)", "DBPS (e P)", 
-                           "CBPS (o)", "DBPS (o MQ)", "DBPS (o MP)", "DBPS (o P)"))) #|>
+                           "CBPS (e)", "DBPS (e MQ)", "DBPS (e MD)", "DBPS (e D)", 
+                           "CBPS (o)", "DBPS (o MQ)", "DBPS (o MD)", "DBPS (o D)"))) #|>
   ## uncomment for xtable
   #xtable()
 ```
@@ -267,8 +267,8 @@ sim1$ATE |>
                            "CPBS (e)", "CBPS (e MQ)", "CBPS (e MP)", "CPBS (e P)", 
                            "CBPS (o)", "CBPS (o MQ)", "CBPS (o MP)", "CPBS (o P)"),
                          c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
-                           "CBPS (e)", "DBPS (e MQ)", "DBPS (e MP)", "DBPS (e P)", 
-                           "CBPS (o)", "DBPS (o MQ)", "DBPS (o MP)", "DBPS (o P)"))) |> 
+                           "CBPS (e)", "DBPS (e MQ)", "DBPS (e MD)", "DBPS (e D)", 
+                           "CBPS (o)", "DBPS (o MQ)", "DBPS (o MD)", "DBPS (o D)"))) |> 
   ggplot(data = _, aes(x = est, y = value)) +
   geom_boxplot() +
   facet_wrap(~quant, nrow = 1) +
@@ -298,8 +298,8 @@ sim2$ATE |>
                            "CPBS (e)", "CBPS (e MQ)", "CBPS (e MP)", "CPBS (e P)", 
                            "CBPS (o)", "CBPS (o MQ)", "CBPS (o MP)", "CPBS (o P)"),
                          c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
-                           "CBPS (e)", "DBPS (e MQ)", "DBPS (e MP)", "DBPS (e P)", 
-                           "CBPS (o)", "DBPS (o MQ)", "DBPS (o MP)", "DBPS (o P)"))) |> 
+                           "CBPS (e)", "DBPS (e MQ)", "DBPS (e MD)", "DBPS (e D)", 
+                           "CBPS (o)", "DBPS (o MQ)", "DBPS (o MD)", "DBPS (o D)"))) |> 
   ggplot(data = _, aes(x = est, y = value)) +
   geom_boxplot() +
   facet_wrap(~quant, nrow = 1) +
