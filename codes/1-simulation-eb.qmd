@@ -24,7 +24,7 @@ Load required packages
 ```{r load-packages}
 library(jointCalib)
 library(ebal) 
-library(kbal) 
+library(kbal)  ## it takes a lot of time to perform 500 simulations
 library(mvnfast)
 library(data.table)
 library(ggplot2)
@@ -33,7 +33,12 @@ library(laeken)
 
 # Simulation from the paper
 
-Generate data as described in the section 4.
+Generate data as described in the section 4. 
+
+**WARNING** as I included `kbal` package for the simulation study it takes now about **5 days to finish the simulation**! If you want to replicate results without `kbal` comment out appropriate lines. In the simulation I did not use the parallel for loop (e.g. using `foreach` + `doFuture`) because the `kbal` package uses `RcppParallel` package that uses all available cores and I cannot change it to smaller number of cores (bug?). 
+
+Without `kbal` simulation takes about 10 minutes.
+
 
 ```{r simulation-study}
 n <- 2000 ## initial sample size
@@ -82,6 +87,8 @@ for (b in 1:B) {
     ebal_res <- ebalance(Treatment = df_long_des$treatment, 
                          X = model.matrix( ~ -1 + x1 + x2 + x3 + x4 + x5 + x6, df_long_des), 
                          print.level = -1)
+    
+    ## comment this to remove kbal result
     kbal_res <- kbal(allx = model.matrix( ~ -1 + x1 + x2 + x3 + x4 + x5 + x6, df_long_des),
                      b= 6,
                      mixed_data = TRUE,
@@ -89,6 +96,7 @@ for (b in 1:B) {
                      treatment = df_long_des$treatment,
                      fullSVD = TRUE,
                      printprogress = FALSE)
+    ## comment this to remove kbal result
     
     mq1_res <- joint_calib_att(formula_means = ~ x1 + x2 + x3 + x4 + x5 + x6,
                                formula_quantiles = ~ x1 + x2 + x3 + x4 + x5,
@@ -104,8 +112,11 @@ for (b in 1:B) {
     
     df_long_des[treatment == 0, ":="(w_ebal=ebal_res$w, w_mq1=mq1_res$g, w_mp1=mp1_res$g)]
     df_long_des[treatment == 1, ":="(w_ebal=1,          w_mq1=1,         w_mp1=1)]
+    
+    ## comment this to remove kbal result
     df_long_des[, w_kbal := kbal_res$w]
-  
+    ## comment this to remove kbal result
+    
     y1_res <- df_long_des[, lapply(.SD, 
                           FUN = function(x) weighted.mean(y1[treatment==1], x[treatment==1]) - weighted.mean(y1[treatment==0], x[treatment==0])), 
                          .SDcols = patterns("w_")][, ":="(var="y1", est="att", tau=NA)]

@@ -163,7 +163,7 @@ models1 <- lapply(c("y1", "y2", "y3"), function(y) {
         eta <- rnorm(n)
         y1 <- x1 + x2 + x3 - x4 + x5 + x6 + eta
         y2 <- x1 + x2 + 0.2 * x3 * x4 - sqrt(x5) + eta
-        y3 <- (x1 + x2 + x5) ^ 2 + eta
+        y3 <- (x1 + x2 + x5)^2 + eta
         df <- data.frame(id = 1:n, x1, x2, x3, x4, x5, x6, d1, d2, d3, y1, y2, y3) |> setDT()
         df_long <-melt(df,id.vars = c(1:7, 11:13),value.name = "treatment",variable.name = "design")
         df_long <- df_long[, .SD[sample(.N, n_sample, replace = T)], by = .(design, treatment)]
@@ -230,5 +230,15 @@ ggplot(data = models1_df[group == "y3"], aes(x = y, y = value)) +
 
 ```{r}
 ggsave(plot = p2, filename = "../results/fig-sim-3-scatter.png", width = 7, height = 5)
+```
+
+
+Add plots from VGAM to show linear approximation in deciles
+
+```
+m3 <- vgam(formula = y3 ~ s(x1) + s(x2)  + s(x3) + s(x4) + s(x5), data= df2, family = uninormal())
+m3 <- vgam(formula = y3 ~ s(x1) + s(x2)  + s(x3) + s(x4) + s(x5) + 
+                          s(x1*x2)+ s(x1*x5) + s(x2*x5) + s(x1*x2*x5), 
+data= df2, family = uninormal())
 ```
 

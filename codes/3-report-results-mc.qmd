@@ -38,7 +38,7 @@ sim1_results[!is.na(tau), est_p := paste0(est, " (", str_pad(tau,4,"right", "0")
 sim1_results[, est_p:=factor(est_p, 
                              c("att", "qtt (0.10)", "qtt (0.25)", "qtt (0.50)", "qtt (0.75)", "qtt (0.90)"),
                              c("ATT", "QTT (0.10)", "QTT (0.25)", "QTT (0.50)", "QTT (0.75)", "QTT (0.90)"))]
-sim1_results[, we:=factor(weight, c("w_ebal", "w_mq1", "w_mp1"), c("EB", "DEB MQ", "DEB MD"))]
+sim1_results[, we:=factor(weight, c("w_ebal", "w_kbal", "w_mq1", "w_mp1"), c("EB", "KEB", "DEB MQ", "DEB MD"))]
 ```
 
 Table 1
@@ -111,7 +111,7 @@ Boxplots
 sim1_results |> 
   ggplot(data = _, aes(x = est_p, y = value, color = we)) +
   geom_hline(yintercept = 0, linetype = "dashed") + 
-  geom_boxplot() +
+  geom_boxplot(outlier.size = 0.5, size = 0.3) +
   facet_grid(var ~ design, scale = "free_y",
              labeller = labeller(var = c("y1"="Y1 (linear)", 
                                          "y2"="Y2 (weak non-lin)",
