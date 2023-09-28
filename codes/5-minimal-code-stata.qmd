@@ -1,0 +1,74 @@
+---
+title: "A minimal example with Stata 18"
+author: "Maciej Beręsewicz"
+format: 
+  html:
+    self-contained: true
+    table-of-contents: true
+    number-sections: true
+    df-print: kable
+editor: source
+execute: 
+  eval: true
+  warning: false
+  message: false
+toc-title: Contents
+lang: en
+---
+
+
+```{r, echo=FALSE, message=FALSE}
+# Statamarkdown: https://github.com/hemken/Statamarkdown
+# devtools::install_github("Hemken/Statamarkdown")
+library(Statamarkdown)
+```
+
+# EB with ebalance
+
+An example code using ebalance
+
+
+```{stata, echo=TRUE, cleanlog=FALSE}
+* install ebalance package
+ssc install ebalance, all replace
+use cps1re74.dta, clear
+* balance only means
+ebalance treat age black educ re74, targets(1)
+* desc
+tabstat re74 age [aweight=_webal], by(treat) s(N me v p50) nototal
+
+* treatment effect:  609.9333  (621.9881) [ -609.2322, 1829.099]
+svyset [pweight=_webal]
+svy: reg re78 treat
+
+* generate local variables for creation of A variables
+qui sum age if treat == 1, detail
+local age_med = r(p50) 
+qui sum re74 if treat == 1, detail
+local re74_med = r(p50)
+qui sum treat, detail
+local  n_1 = r(sum)
+
+* create A variables
+gen a_age = invlogit(-2000*(age - `age_med'))/`n_1'
+gen a_re74 = invlogit(-2000*(re74 - `re74_med'))/`n_1'
+
+* check to what it sums 
+tabstat a_age, by(treat) s(sum)
+tabstat a_re74, by(treat) s(sum)
+
+* balance with quantiles
+ebalance treat age a_age black educ re74 a_re74, targets(1)
+
+* compare after balancing
+tabstat re74 age [aweight=_webal], by(treat) s(N me v p50) nototal
+
+* treatment effect after weighting with medians : 774.8988  (645.6089) [ -490.5661, 2040.364]
+svyset [pweight=_webal] 
+svy: reg re78 treat
+```
+
+# CBPS with psweight
+
+
+
