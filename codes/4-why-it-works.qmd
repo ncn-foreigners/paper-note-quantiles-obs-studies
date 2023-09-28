@@ -32,7 +32,7 @@ library(ggpubr)
 Small simulation using replicate function
 
 ```{r}
-set.seed(2023)
+set.seed(1234)
 n <- 2000 ## initial sample size
 n_sample <- 1000 ## required sample size n_0=n_1=n (#n control = #n treatment)
 mu <- c(0, 0, 0) 
@@ -42,8 +42,8 @@ Sigma <- matrix(c(2, 1, -1,
                 nrow=3, 
                 ncol=3)
 
-result_sim <- replicate(n = 500, simplify = FALSE, expr = {
-  
+result_sim <- replicate(n = 100, simplify = FALSE, expr = {
+  cat(".")
   models1 <- lapply(c("y1", "y2", "y3"), function(y) {
         x123 <- rmvn(n=n, mu=mu, sigma=Sigma)
         x1 <- x123[, 1]
@@ -112,18 +112,15 @@ result_sim_df <- rbindlist(result_sim, idcol = "rep")
 ```
 
 ```{r}
-saveRDS(result_sim_df, file = "../results/sim-3-why-it-works-eb.R")
+saveRDS(result_sim_df, file = "../results/sim3-why-it-works-eb.rds")
 ```
 
-```{r}
-head(result_sim_df)
-```
 ```{r}
 result_sim_df |> 
   transform(variable = factor(variable, paste0("m",1:5),
                               c("Y | X",  "Y | A_q", "Y | X, A_q","Y | A_d", "Y | X, A_d")),
             group = factor(group, c("y1", "y2", "y3"),
-                           c("Y1 (lin)", "Y2 (med nonlin)", "Y3 (str nonlin)"))) |> 
+                           c("Y1 (lin)", "Y2 (med non-lin)", "Y3 (str non-lin)"))) |> 
 ggplot(data = , aes(x = group, y = r, fill = variable)) +
   geom_violin(scale = "width", draw_quantiles = c(0.25,0.5,0.75)) + 
   facet_wrap(~design, ncol = 3,
@@ -144,7 +141,7 @@ Visualisation for one simulation
 
 
 ```{r}
-set.seed(2023)
+set.seed(123)
 models1 <- lapply(c("y1", "y2", "y3"), function(y) {
         x123 <- rmvn(n=n, mu=mu, sigma=Sigma)
         x1 <- x123[, 1]
@@ -207,8 +204,8 @@ ggplot(data = models1_df[group == "y3"], aes(x = y, y = value)) +
   geom_point(shape = 1, alpha = 0.5) +
   facet_grid(design ~ variable,
              labeller = labeller(group = c("y1" = "Y1 (lin)", 
-                                           "y2" = "Y2 (med nonlin)",
-                                           "y3" = "Y3 (str nonlin)"),
+                                           "y2" = "Y2 (med non-lin)",
+                                           "y3" = "Y3 (str non-lin)"),
                                  variable = c("m1" = "Y | X",
                                               "m2" = "Y | A_q",
                                               "m3" = "Y | X, A_q",
@@ -223,7 +220,7 @@ ggplot(data = models1_df[group == "y3"], aes(x = y, y = value)) +
            r.accuracy = 0.01, 
            label.x.npc = "center", label.y.npc = "top") +
   labs(x = "Y observed", y = "Y predicted", 
-       title = "Scatter plots for Y3 (strong nonlinearity)") +
+       title = "Scatter plots for Y3 (strong non-linearity)") +
   scale_y_continuous(limits = c(-20, 170)) +
   scale_x_continuous(limits = c(-20, 170)) -> p2
 ```
@@ -232,13 +229,4 @@ ggplot(data = models1_df[group == "y3"], aes(x = y, y = value)) +
 ggsave(plot = p2, filename = "../results/fig-sim-3-scatter.png", width = 7, height = 5)
 ```
 
-
-Add plots from VGAM to show linear approximation in deciles
-
-```
-m3 <- vgam(formula = y3 ~ s(x1) + s(x2)  + s(x3) + s(x4) + s(x5), data= df2, family = uninormal())
-m3 <- vgam(formula = y3 ~ s(x1) + s(x2)  + s(x3) + s(x4) + s(x5) + 
-                          s(x1*x2)+ s(x1*x5) + s(x2*x5) + s(x1*x2*x5), 
-data= df2, family = uninormal())
-```
 
