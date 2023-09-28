@@ -2685,9 +2685,7 @@ vertical-align: -.125em;
 <div class="cell-output cell-output-stdout">
 <pre><code>. * install ebalance package
 . ssc install ebalance, all replace
-checking ebalance consistency and verifying not already installedcopying into current directory...
-      copying  cps1re74.dta
-ancillary files successfully copied.
+checking ebalance consistency and verifying not already installedall files already exist and are up to date.
 
 . use cps1re74.dta, clear
 (DW Subset of LaLonde Data)
@@ -2956,6 +2954,313 @@ Number of PSUs   = 16,177                             Population size =    370
 </section>
 <section id="cbps-with-psweight" class="level1" data-number="2">
 <h1 data-number="2"><span class="header-section-number">2</span> CBPS with psweight</h1>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode stata code-with-copy"><code class="sourceCode stata"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">use</span> cps1re74.dta, <span class="kw">clear</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>* <span class="kw">generate</span> <span class="kw">local</span> variables <span class="kw">for</span> creation <span class="kw">of</span> A variables</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="kw">qui</span> <span class="kw">sum</span> age <span class="kw">if</span> treat == 1, <span class="kw">detail</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">local</span> age_med = <span class="fu">r</span>(p50) </span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="kw">qui</span> <span class="kw">sum</span> re74 <span class="kw">if</span> treat == 1, <span class="kw">detail</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="kw">local</span> re74_med = <span class="fu">r</span>(p50)</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="kw">qui</span> <span class="kw">sum</span> treat, <span class="kw">detail</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="kw">local</span>  n_1 = <span class="fu">r</span>(<span class="kw">sum</span>)</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>* create A variables</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="kw">gen</span> a_age = <span class="fu">invlogit</span>(-2000*(age - <span class="ot">`age_med&#39;</span>))/<span class="ot">`n_1&#39;</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="kw">gen</span> a_re74 = <span class="fu">invlogit</span>(-2000*(re74 - <span class="ot">`re74_med&#39;</span>))/<span class="ot">`n_1&#39;</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>* CBPS without a_age</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>psweight cbps treat age <span class="bn">black</span> educ, ate</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>psweight call balanceresults()</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>* CBPS with a_age</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>psweight cbps treat age a_age <span class="bn">black</span> educ, ate</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>psweight call balanceresults()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>. use cps1re74.dta, clear
+(DW Subset of LaLonde Data)
+
+. 
+. * generate local variables for creation of A variables
+. qui sum age if treat == 1, detail
+
+. local age_med = r(p50) 
+
+. qui sum re74 if treat == 1, detail
+
+. local re74_med = r(p50)
+
+. qui sum treat, detail
+
+. local  n_1 = r(sum)
+
+. 
+. * create A variables
+. gen a_age = invlogit(-2000*(age - `age_med&#39;))/`n_1&#39;
+
+. gen a_re74 = invlogit(-2000*(re74 - `re74_med&#39;))/`n_1&#39;
+
+. 
+. * CBPS without a_age
+. psweight cbps treat age black educ, ate
+
+
+
+  Step 1 (initial values from logit model):
+initial:       f(p) = -11213.042
+alternative:   f(p) = -7761.6434
+rescale:       f(p) = -1033.6114
+Iteration 0:   f(p) = -1033.6114  
+Iteration 1:   f(p) = -842.01641  
+Iteration 2:   f(p) = -646.80855  
+Iteration 3:   f(p) =  -635.9223  
+Iteration 4:   f(p) = -635.69177  
+Iteration 5:   f(p) = -635.69168  
+Iteration 6:   f(p) = -635.69168  
+  
+  Step 2 (CBPS) :
+Iteration 0:   f(p) =  2.042e-13  
+Iteration 1:   f(p) =  1.766e-13  
+Iteration 2:   f(p) =  1.673e-13  
+Iteration 3:   f(p) =  1.667e-13  
+Iteration 4:   f(p) =  1.610e-13  
+Iteration 5:   f(p) =  1.539e-13  
+Iteration 6:   f(p) =  1.535e-13  
+Iteration 7:   f(p) =  1.534e-13  
+Iteration 8:   f(p) =  1.525e-13  
+Iteration 9:   f(p) =  1.432e-13  
+Iteration 10:  f(p) =  1.303e-13  
+Iteration 11:  f(p) =  1.258e-13  
+Iteration 12:  f(p) =  1.255e-13  
+Iteration 13:  f(p) =  1.254e-13  
+Iteration 14:  f(p) =  1.253e-13  
+Iteration 15:  f(p) =  1.235e-13  
+Iteration 16:  f(p) =  3.828e-14  
+Iteration 17:  f(p) =  5.095e-15  
+Iteration 18:  f(p) =  4.306e-15  
+Iteration 19:  f(p) =  5.126e-16  
+Iteration 20:  f(p) =  7.593e-17  
+Iteration 21:  f(p) =  2.560e-17  
+Iteration 22:  f(p) =  1.560e-18  
+Iteration 23:  f(p) =  1.811e-20  
+Iteration 24:  f(p) =  7.177e-23  
+
+Propensity score model coefficients                Number of obs  =     16,177
+Propensity score reweigting
+Loss = CBPS (just identified)
+------------------------------------------------------------------------------
+       treat | Coefficient
+-------------+----------------------------------------------------------------
+         age |  -.1196659
+       black |    4.18853
+        educ |  -.2673553
+       _cons |   .2013366
+------------------------------------------------------------------------------
+New variables created: _weight _weight_mtch _pscore _treated 
+  
+
+. psweight call balanceresults()
+  Balance:
+-------------------------------------------------------------------------------
+             |    mean_T     mean_C       diff   std_diff    sd_pool  var_ratio
+-------------+-----------------------------------------------------------------
+         age |  33.06978   33.06979  -7.69e-06  -6.96e-07   11.03949   .4972355
+       black |  .0860428    .086043  -1.31e-07  -4.65e-07   .2804362   1.005371
+        educ |   11.9912   11.99118   .0000118   4.12e-06   2.874113   .3865176
+-------------------------------------------------------------------------------
+  
+  Mean standardized diff.             = 0.00000
+  Mean absolute standardized diff.    = 0.00000
+  Maximum absolute standardized diff. = 0.00000
+  C.V. of matching weights:           = 0.48440
+  S.D. of matching weights:           = 0.48440
+  Skewness of matching weights:       = 0.65745
+  Kurtosis of matching weights:       = 0.52753
+  Maximum matching weight:            = 53.13241
+
+. 
+. * CBPS with a_age
+. psweight cbps treat age a_age black educ, ate
+
+
+
+  Step 1 (initial values from logit model):
+initial:       f(p) = -11213.042
+alternative:   f(p) = -7761.6434
+rescale:       f(p) = -1033.6114
+Iteration 0:   f(p) = -1033.6114  
+Iteration 1:   f(p) = -842.03605  
+Iteration 2:   f(p) = -650.08085  
+Iteration 3:   f(p) = -632.84564  
+Iteration 4:   f(p) = -632.20567  
+Iteration 5:   f(p) = -632.20438  
+Iteration 6:   f(p) = -632.20438  
+  
+  Step 2 (CBPS) :
+Iteration 0:   f(p) =  2.245e-13  
+Iteration 1:   f(p) =  2.126e-13  
+Iteration 2:   f(p) =  2.062e-13  
+Iteration 3:   f(p) =  1.469e-13  
+Iteration 4:   f(p) =  1.277e-13  
+Iteration 5:   f(p) =  1.270e-13  
+Iteration 6:   f(p) =  1.265e-13  
+Iteration 7:   f(p) =  1.028e-13  
+Iteration 8:   f(p) =  7.908e-14  
+Iteration 9:   f(p) =  7.585e-14  
+Iteration 10:  f(p) =  7.581e-14  
+Iteration 11:  f(p) =  7.580e-14  
+Iteration 12:  f(p) =  7.553e-14  
+Iteration 13:  f(p) =  6.999e-14  
+Iteration 14:  f(p) =  3.631e-14  
+Iteration 15:  f(p) =  1.691e-14  
+Iteration 16:  f(p) =  1.379e-14  
+Iteration 17:  f(p) =  1.188e-14  
+Iteration 18:  f(p) =  1.100e-14  
+Iteration 19:  f(p) =  1.093e-14  
+Iteration 20:  f(p) =  1.093e-14  
+Iteration 21:  f(p) =  1.093e-14  
+Iteration 22:  f(p) =  1.093e-14  
+Iteration 23:  f(p) =  1.093e-14  
+Iteration 24:  f(p) =  1.093e-14  
+Iteration 25:  f(p) =  1.093e-14  
+Iteration 26:  f(p) =  1.093e-14  
+Iteration 27:  f(p) =  1.084e-14  
+Iteration 28:  f(p) =  8.224e-15  
+BFGS stepping has contracted, resetting BFGS Hessian
+Iteration 29:  f(p) =  3.420e-15  
+Iteration 30:  f(p) =  3.143e-15  
+Iteration 31:  f(p) =  2.613e-15  
+Iteration 32:  f(p) =  2.573e-15  
+Iteration 33:  f(p) =  2.506e-15  
+Iteration 34:  f(p) =  2.506e-15  
+Iteration 35:  f(p) =  2.505e-15  
+Iteration 36:  f(p) =  2.489e-15  
+Iteration 37:  f(p) =  2.488e-15  
+Iteration 38:  f(p) =  2.488e-15  
+Iteration 39:  f(p) =  2.488e-15  
+Iteration 40:  f(p) =  2.488e-15  
+Iteration 41:  f(p) =  2.488e-15  
+Iteration 42:  f(p) =  2.486e-15  
+Iteration 43:  f(p) =  2.486e-15  
+Iteration 44:  f(p) =  2.486e-15  
+Iteration 45:  f(p) =  2.486e-15  
+Iteration 46:  f(p) =  2.486e-15  
+Iteration 47:  f(p) =  2.486e-15  
+Iteration 48:  f(p) =  2.486e-15  
+Iteration 49:  f(p) =  2.483e-15  
+BFGS stepping has contracted, resetting BFGS Hessian
+Iteration 50:  f(p) =  2.454e-15  
+Iteration 51:  f(p) =  2.449e-15  
+Iteration 52:  f(p) =  2.441e-15  
+Iteration 53:  f(p) =  2.436e-15  
+Iteration 54:  f(p) =  2.432e-15  
+Iteration 55:  f(p) =  2.432e-15  
+Iteration 56:  f(p) =  2.431e-15  
+Iteration 57:  f(p) =  2.427e-15  
+Iteration 58:  f(p) =  2.425e-15  
+Iteration 59:  f(p) =  2.425e-15  
+Iteration 60:  f(p) =  2.425e-15  
+Iteration 61:  f(p) =  2.425e-15  
+Iteration 62:  f(p) =  2.421e-15  
+Iteration 63:  f(p) =  2.395e-15  
+Iteration 64:  f(p) =  2.393e-15  
+Iteration 65:  f(p) =  2.393e-15  
+Iteration 66:  f(p) =  2.393e-15  
+Iteration 67:  f(p) =  2.393e-15  
+Iteration 68:  f(p) =  2.393e-15  
+Iteration 69:  f(p) =  2.393e-15  
+BFGS stepping has contracted, resetting BFGS Hessian
+Iteration 70:  f(p) =  2.387e-15  
+Iteration 71:  f(p) =  2.384e-15  
+Iteration 72:  f(p) =  2.378e-15  
+Iteration 73:  f(p) =  2.377e-15  
+Iteration 74:  f(p) =  2.377e-15  
+Iteration 75:  f(p) =  2.377e-15  
+Iteration 76:  f(p) =  2.377e-15  
+Iteration 77:  f(p) =  2.377e-15  
+Iteration 78:  f(p) =  2.377e-15  
+Iteration 79:  f(p) =  2.377e-15  
+Iteration 80:  f(p) =  2.377e-15  
+Iteration 81:  f(p) =  2.377e-15  
+Iteration 82:  f(p) =  2.376e-15  
+Iteration 83:  f(p) =  2.376e-15  
+Iteration 84:  f(p) =  2.376e-15  
+Iteration 85:  f(p) =  2.376e-15  
+Iteration 86:  f(p) =  2.376e-15  
+Iteration 87:  f(p) =  2.376e-15  
+Iteration 88:  f(p) =  2.375e-15  
+BFGS stepping has contracted, resetting BFGS Hessian
+Iteration 89:  f(p) =  2.349e-15  
+Iteration 90:  f(p) =  2.345e-15  
+Iteration 91:  f(p) =  2.338e-15  
+Iteration 92:  f(p) =  2.335e-15  
+Iteration 93:  f(p) =  2.330e-15  
+Iteration 94:  f(p) =  2.330e-15  
+Iteration 95:  f(p) =  2.330e-15  
+Iteration 96:  f(p) =  2.329e-15  
+Iteration 97:  f(p) =  2.324e-15  
+Iteration 98:  f(p) =  2.323e-15  
+Iteration 99:  f(p) =  2.323e-15  
+Iteration 100: f(p) =  2.323e-15  
+Iteration 101: f(p) =  2.304e-15  
+Iteration 102: f(p) =  2.285e-15  
+Iteration 103: f(p) =  2.285e-15  
+Iteration 104: f(p) =  2.285e-15  
+Iteration 105: f(p) =  2.285e-15  
+Iteration 106: f(p) =  2.285e-15  
+Iteration 107: f(p) =  2.285e-15  
+Iteration 108: f(p) =  2.284e-15  
+BFGS stepping has contracted, resetting BFGS Hessian
+Iteration 109: f(p) =  2.276e-15  
+Iteration 110: f(p) =  2.274e-15  
+Iteration 111: f(p) =  2.271e-15  
+Iteration 112: f(p) =  2.270e-15  
+Iteration 113: f(p) =  2.268e-15  
+Iteration 114: f(p) =  2.268e-15  
+Iteration 115: f(p) =  2.268e-15  
+Iteration 116: f(p) =  2.268e-15  
+Iteration 117: f(p) =  2.268e-15  
+Iteration 118: f(p) =  2.268e-15  
+Iteration 119: f(p) =  2.268e-15  
+Iteration 120: f(p) =  2.268e-15  
+convergence not achieved
+
+Propensity score model coefficients                Number of obs  =     16,177
+Propensity score reweigting
+Loss = CBPS (just identified)
+------------------------------------------------------------------------------
+       treat | Coefficient
+-------------+----------------------------------------------------------------
+         age |  -.1595369
+       a_age |  -200.6982
+       black |   4.199792
+        educ |  -.2679442
+       _cons |   1.807006
+------------------------------------------------------------------------------
+New variables created: _weight _weight_mtch _pscore _treated 
+  
+
+. psweight call balanceresults()
+  Balance:
+-------------------------------------------------------------------------------
+             |    mean_T     mean_C       diff   std_diff    sd_pool  var_ratio
+-------------+-----------------------------------------------------------------
+         age |  32.66974   33.08951  -.4197733  -.0380556   11.03053   .5781939
+       a_age |  .0015403   .0015137   .0000266   .0112047   .0023751   .9986838
+       black |  .0871757   .0855191   .0016566   .0059228   .2796894    1.02299
+        educ |  11.99152   11.99263  -.0011192  -.0003892   2.875562   .4120679
+-------------------------------------------------------------------------------
+  
+  Mean standardized diff.             = -0.00533
+  Mean absolute standardized diff.    = 0.01389
+  Maximum absolute standardized diff. = 0.03806
+  C.V. of matching weights:           = 0.49423
+  S.D. of matching weights:           = 0.49423
+  Skewness of matching weights:       = 0.71564
+  Kurtosis of matching weights:       = 0.60729
+  Maximum matching weight:            = 56.26429</code></pre>
+</div>
+</div>
 </section>
 
 </main>

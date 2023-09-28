@@ -70,5 +70,28 @@ svy: reg re78 treat
 
 # CBPS with psweight
 
+```{stata, echo=TRUE, cleanlog=FALSE}
+use cps1re74.dta, clear
+
+* generate local variables for creation of A variables
+qui sum age if treat == 1, detail
+local age_med = r(p50) 
+qui sum re74 if treat == 1, detail
+local re74_med = r(p50)
+qui sum treat, detail
+local  n_1 = r(sum)
+
+* create A variables
+gen a_age = invlogit(-2000*(age - `age_med'))/`n_1'
+gen a_re74 = invlogit(-2000*(re74 - `re74_med'))/`n_1'
+
+* CBPS without a_age
+psweight cbps treat age black educ, ate
+psweight call balanceresults()
+
+* CBPS with a_age
+psweight cbps treat age a_age black educ, ate
+psweight call balanceresults()
+```
 
 
