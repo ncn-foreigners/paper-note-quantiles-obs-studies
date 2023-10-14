@@ -46,7 +46,7 @@ remotes::install_github("pedrohcgs/IPS")
 - Tutorial for [the `jointCalib` package]()
 - Codes for the proposed method in
   [`Stata`](https://htmlpreview.github.io/?https://raw.githubusercontent.com/ncn-foreigners/paper-note-quantiles-obs-studies/main/codes/5-minimal-code-stata.html)
-  and [`Python`]()
+  and `Python` \[work in progress\].
 
 ## Highlights
 
@@ -54,16 +54,17 @@ remotes::install_github("pedrohcgs/IPS")
 
 ![](results/fig-sim-1-ebal-boxplot.png)
 
-### Results for the distribution balancing propensity score (DBPS)
+### Results for the distributional propensity score (DPS)
 
 ![](results/fig-sim-2-dbps-design-1.png)
 ![](results/fig-sim-2-dbps-design-2.png)
 
 ### Why it works?
 
-Including quartiles ($A_q$) and deciles ($A_d$) along with X makes the
-relationship more linear and thus improves the estimates as EB and CBPS
-assumes linear relationship between Y and calibration / balance
+Including quartiles ($A_q$) and deciles ($A_d$) along with X
+approximates the relationship between Y and X by local linear functions
+(as in segmented regression) and thus improves the estimates, as EB and
+CBPS assume a linear relationship between Y and calibration/balance
 variables.
 
 ![](results/fig-sim-3-pearson.png)
