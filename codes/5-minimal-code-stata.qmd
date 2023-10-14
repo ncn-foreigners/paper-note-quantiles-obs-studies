@@ -70,6 +70,8 @@ svy: reg re78 treat
 
 # CBPS with psweight
 
+For CBPS we will use other dataset with larger treatment group
+
 ```{stata, echo=TRUE, cleanlog=FALSE}
 use cps1re74.dta, clear
 

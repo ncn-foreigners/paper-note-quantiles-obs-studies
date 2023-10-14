@@ -1,5 +1,11 @@
 
-# Repository for the paper “Survey calibration meets observational studies: a simple method to balance covariate distributions”
+# Repository for the paper “Survey calibration for causal inference: a simple method to balance covariate distributions”
+
+# Paper
+
+Here is the first version of the paper: [“Survey calibration for causal
+inference: a simple method to balance covariate
+distributions”](paper/2023-beresewicz-causal-balancing.pdf) (2023.10.14)
 
 # Acknowledgements
 
@@ -38,7 +44,9 @@ remotes::install_github("pedrohcgs/IPS")
     works)](https://htmlpreview.github.io/?https://raw.githubusercontent.com/ncn-foreigners/paper-note-quantiles-obs-studies/main/codes/4-why-it-works.html)
 - Simulation results may be found in folder `results/`
 - Tutorial for [the `jointCalib` package]()
-- Codes for the proposed method in [`Stata` and `Python`]()
+- Codes for the proposed method in
+  [`Stata`](https://htmlpreview.github.io/?https://raw.githubusercontent.com/ncn-foreigners/paper-note-quantiles-obs-studies/main/codes/5-minimal-code-stata.html)
+  and [`Python`]()
 
 ## Highlights
 
