@@ -43,7 +43,11 @@ remotes::install_github("pedrohcgs/IPS")
   - [simulation 3 (why it
     works)](https://htmlpreview.github.io/?https://raw.githubusercontent.com/ncn-foreigners/paper-note-quantiles-obs-studies/main/codes/4-why-it-works.html)
 - Simulation results may be found in folder `results/`
-- Tutorial for [the `jointCalib` package]()
+- Tutorial for [the `jointCalib`
+  package](https://ncn-foreigners.github.io/jointCalib/articles/d_causal.html)
+- A minimal example using
+  [`WeightIt`](https://htmlpreview.github.io/?https://raw.githubusercontent.com/ncn-foreigners/paper-note-quantiles-obs-studies/main/codes/6-weightit.html)
+  package.
 - Codes for the proposed method in
   [`Stata`](https://htmlpreview.github.io/?https://raw.githubusercontent.com/ncn-foreigners/paper-note-quantiles-obs-studies/main/codes/5-minimal-code-stata.html)
   and `Python` \[work in progress\].
