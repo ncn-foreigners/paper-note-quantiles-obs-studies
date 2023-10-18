@@ -68,13 +68,19 @@ re75_tq <- with( subset(LaLonde, treat == 1), quantile(re75))
 n_t <- sum(LaLonde$treat) ## number of rows
 ```
 
-Add new variables using the Heavyside function approximation using the logistic function. Here we only give an example for the median.
+Add new variables using the Heavyside function approximation using the logistic function. Here we only give an example for the median and Q3.
 
 ```{r}
 LaLonde$age_50 <- with(LaLonde, plogis(-2000*(age-age_tq[3]))/n_t)
 LaLonde$educ_50 <- with(LaLonde, plogis(-2000*(educ-educ_tq[3]))/n_t)
 LaLonde$re74_50 <- with(LaLonde, plogis(-2000*(re74-re74_tq[3]))/n_t)
 LaLonde$re75_50 <- with(LaLonde, plogis(-2000*(re75-re75_tq[3]))/n_t)
+
+LaLonde$age_75 <- with(LaLonde, plogis(-2000*(age-age_tq[4]))/n_t)
+LaLonde$educ_75 <- with(LaLonde, plogis(-2000*(educ-educ_tq[4]))/n_t)
+LaLonde$re74_75 <- with(LaLonde, plogis(-2000*(re74-re74_tq[4]))/n_t)
+LaLonde$re75_75 <- with(LaLonde, plogis(-2000*(re75-re75_tq[4]))/n_t)
+
 ```
 
 Check that the variables sum to 0.5, as the treatment sample is small they may not sum to 0.5 (as in the `educ` variable).
@@ -90,7 +96,8 @@ Now add the newly handled variables to the `weightit` function.
 
 ```{r}
 ebal_result2 <- weightit(treat ~ age + educ + black + hisp + married + nodegr + re74 + re75 +
-                            age_50 + educ_50 + re74_50 + re75_50,
+                            age_50 + educ_50 + re74_50 + re75_50 + 
+                            age_75 + educ_75 + re74_75 + re75_75,
                           data = LaLonde, estimand = "ATT", method = "ebal")
 summary(ebal_result2)
 ```
@@ -122,28 +129,28 @@ Compare weighted medians for selected variables.
 data.frame(
   age_treat = with(subset(LaLonde, treat == 1), median(age)),
   age_before_cont = with(subset(LaLonde, treat == 0), median(age)),
-  age_after_ebal2 = with(subset(LaLonde, treat == 0), weightedMedian(age, weights1)),
+  age_after_ebal1 = with(subset(LaLonde, treat == 0), weightedMedian(age, weights1)),
   age_after_ebal2 = with(subset(LaLonde, treat == 0), weightedMedian(age, weights2)) 
 )
 
 data.frame(
   educ_treat = with(subset(LaLonde, treat == 1), median(educ)),
   educ_before_cont = with(subset(LaLonde, treat == 0), median(educ)),
-  educ_after_ebal2 = with(subset(LaLonde, treat == 0), weightedMedian(educ, weights1)),
+  educ_after_ebal1 = with(subset(LaLonde, treat == 0), weightedMedian(educ, weights1)),
   educ_after_ebal2 = with(subset(LaLonde, treat == 0), weightedMedian(educ, weights2)) 
 )
 
 data.frame(
   re74_treat = with(subset(LaLonde, treat == 1), median(re74)),
   re74_before_cont = with(subset(LaLonde, treat == 0), median(re74)),
-  re74_after_ebal2 = with(subset(LaLonde, treat == 0), weightedMedian(re74, weights1)),
+  re74_after_ebal1 = with(subset(LaLonde, treat == 0), weightedMedian(re74, weights1)),
   re74_after_ebal2 = with(subset(LaLonde, treat == 0), weightedMedian(re74, weights2)) 
 )
 
 data.frame(
   re75_treat = with(subset(LaLonde, treat == 1), median(re75)),
   re75_before_cont = with(subset(LaLonde, treat == 0), median(re75)),
-  re75_after_ebal2 = with(subset(LaLonde, treat == 0), weightedMedian(re75, weights1)),
+  re75_after_ebal1 = with(subset(LaLonde, treat == 0), weightedMedian(re75, weights1)),
   re75_after_ebal2 = with(subset(LaLonde, treat == 0), weightedMedian(re75, weights2)) 
 )
 
@@ -198,5 +205,4 @@ data.frame(q = seq(0.1, 0.9, 0.1),
              with(subset(LaLonde, treat == 0), weightedQuantile(re78, weights2, seq(0.1, 0.9, 0.1))))
 ```
 
-For this dataset we do not see significant differences.
-
+Some differences are observed from 0.6-quantile.
