@@ -45,7 +45,7 @@ remotes::install_github("pedrohcgs/IPS")
 - Simulation results may be found in folder `results/`
 - Tutorial for [the `jointCalib`
   package](https://ncn-foreigners.github.io/jointCalib/articles/d_causal.html)
-- A minimal example using
+- A minimal example using the
   [`WeightIt`](https://htmlpreview.github.io/?https://raw.githubusercontent.com/ncn-foreigners/paper-note-quantiles-obs-studies/main/codes/6-weightit.html)
   package.
 - Codes for the proposed method in
