@@ -51,6 +51,12 @@ ebal_result1 <- weightit(treat ~ age + educ + black + hisp + married + nodegr + 
 summary(ebal_result1)
 ```
 
+Balance statistics after entropy balancing.
+
+```{r}
+bal.tab(ebal_result1, stats = c("m", "v", "ks"), thresholds = c(m = .05))
+```
+
 Now calculate quantiles for continuous variables for the treatment group.
 
 ```{r}
@@ -92,7 +98,7 @@ summary(ebal_result2)
 Check that newly created variables are balanced.
 
 ```{r}
-bal.tab(ebal_result2, stats = c("m", "v"), thresholds = c(m = .05))
+bal.tab(ebal_result2, stats = c("m", "v", "ks"), thresholds = c(m = .05))
 ```
 
 Compare distribution of weights.
@@ -142,6 +148,17 @@ data.frame(
 )
 
 ```
+
+We can also see that KS statistic is lower (thus better) for entropy balancing of means and medians.
+
+```{r}
+tab1 <- bal.tab(ebal_result1, stats = "ks")
+tab2 <- bal.tab(ebal_result2, stats = "ks")
+data.frame(vars = rownames(tab1$Balance)[1:8], 
+           "EB"= tab1$Balance$KS.Adj[1:8]*100, 
+           "DEB" = tab2$Balance$KS.Adj[1:8]*100)
+```
+
 
 Fit two models. We do not add `*_50` variables as they are only used to calibrate the weights. 
 
