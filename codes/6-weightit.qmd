@@ -1,0 +1,185 @@
+---
+title: "A minimal example with `WeightIt` package"
+author: "Maciej Beręsewicz"
+format: 
+  html:
+    self-contained: true
+    table-of-contents: true
+    number-sections: true
+    df-print: kable
+editor: source
+execute: 
+  eval: true
+  warning: false
+  message: false
+toc-title: Contents
+lang: en
+---
+
+Here is a minimal example of how to use the [`WeightIt`](https://cran.r-project.org/package=WeightIt) package with the proposed approach.
+
+Load packages
+
+```{r }
+library(WeightIt)
+library(cobalt)
+library(marginaleffects) 
+library(laeken) ## for weighted quantiles
+library(CBPS) ## for LaLonde data
+```
+
+Load data (3212 rows)
+
+```{r}
+data("LaLonde", package = "CBPS")
+head(LaLonde)
+```
+
+Compare means with `cobalt::bal.tab`.
+
+
+```{r}
+bal.tab(treat ~ age + educ + black + hisp + married + nodegr + re74 + re75,
+        data = LaLonde, estimand = "ATT", thresholds = c(m = .05))
+```
+
+Initial weighting with entropy balancing.
+
+```{r}
+ebal_result1 <- weightit(treat ~ age + educ + black + hisp + married + nodegr + re74 + re75,
+                         data = LaLonde, estimand = "ATT", method = "ebal")
+summary(ebal_result1)
+```
+
+Now calculate quantiles for continuous variables for the treatment group.
+
+```{r}
+age_tq <- with( subset(LaLonde, treat == 1), quantile(age))
+educ_tq <- with( subset(LaLonde, treat == 1), quantile(educ))
+re74_tq <- with( subset(LaLonde, treat == 1), quantile(re74))
+re75_tq <- with( subset(LaLonde, treat == 1), quantile(re75))
+
+n_t <- sum(LaLonde$treat) ## number of rows
+```
+
+Add new variables using the Heavyside function approximation using the logistic function. Here we only give an example for the median.
+
+```{r}
+LaLonde$age_50 <- with(LaLonde, plogis(-2000*(age-age_tq[3]))/n_t)
+LaLonde$educ_50 <- with(LaLonde, plogis(-2000*(educ-educ_tq[3]))/n_t)
+LaLonde$re74_50 <- with(LaLonde, plogis(-2000*(re74-re74_tq[3]))/n_t)
+LaLonde$re75_50 <- with(LaLonde, plogis(-2000*(re75-re75_tq[3]))/n_t)
+```
+
+Check that the variables sum to 0.5, as the treatment sample is small they may not sum to 0.5 (as in the `educ` variable).
+
+```{r}
+aggregate(age_50 ~ treat, LaLonde, sum)
+aggregate(educ_50 ~ treat, LaLonde, sum)
+aggregate(re74_50 ~ treat, LaLonde, sum)
+aggregate(re75_50 ~ treat, LaLonde, sum)
+```
+
+Now add the newly handled variables to the `weightit` function.
+
+```{r}
+ebal_result2 <- weightit(treat ~ age + educ + black + hisp + married + nodegr + re74 + re75 +
+                            age_50 + educ_50 + re74_50 + re75_50,
+                          data = LaLonde, estimand = "ATT", method = "ebal")
+summary(ebal_result2)
+```
+
+Check that newly created variables are balanced.
+
+```{r}
+bal.tab(ebal_result2, stats = c("m", "v"), thresholds = c(m = .05))
+```
+
+Compare distribution of weights.
+
+```{r}
+plot(x=ebal_result1$weights, y=ebal_result2$weights, 
+     xlim = c(0, 15), ylim = c(0, 15),
+     xlab = "ebal with means", 
+     ylab = "ebal with means and medians")
+```
+Add both weights to the `LaLonde` data.frame.
+
+```{r}
+LaLonde$weights1 <- ebal_result1$weights
+LaLonde$weights2 <- ebal_result2$weights
+```
+
+Compare weighted medians for selected variables.
+
+```{r}
+data.frame(
+  age_treat = with(subset(LaLonde, treat == 1), median(age)),
+  age_before_cont = with(subset(LaLonde, treat == 0), median(age)),
+  age_after_ebal2 = with(subset(LaLonde, treat == 0), weightedMedian(age, weights1)),
+  age_after_ebal2 = with(subset(LaLonde, treat == 0), weightedMedian(age, weights2)) 
+)
+
+data.frame(
+  educ_treat = with(subset(LaLonde, treat == 1), median(educ)),
+  educ_before_cont = with(subset(LaLonde, treat == 0), median(educ)),
+  educ_after_ebal2 = with(subset(LaLonde, treat == 0), weightedMedian(educ, weights1)),
+  educ_after_ebal2 = with(subset(LaLonde, treat == 0), weightedMedian(educ, weights2)) 
+)
+
+data.frame(
+  re74_treat = with(subset(LaLonde, treat == 1), median(re74)),
+  re74_before_cont = with(subset(LaLonde, treat == 0), median(re74)),
+  re74_after_ebal2 = with(subset(LaLonde, treat == 0), weightedMedian(re74, weights1)),
+  re74_after_ebal2 = with(subset(LaLonde, treat == 0), weightedMedian(re74, weights2)) 
+)
+
+data.frame(
+  re75_treat = with(subset(LaLonde, treat == 1), median(re75)),
+  re75_before_cont = with(subset(LaLonde, treat == 0), median(re75)),
+  re75_after_ebal2 = with(subset(LaLonde, treat == 0), weightedMedian(re75, weights1)),
+  re75_after_ebal2 = with(subset(LaLonde, treat == 0), weightedMedian(re75, weights2)) 
+)
+
+```
+
+Fit two models. We do not add `*_50` variables as they are only used to calibrate the weights. 
+
+```{r}
+fit1 <- lm(re78 ~ treat * (age + educ + black + hisp + married + nodegr + re74 + re75),
+           data = LaLonde, weights = weights1)
+fit2 <- lm(re78 ~ treat * (age + educ + black + hisp + married + nodegr + re74 + re75),
+           data = LaLonde, weights = weights2)
+```
+
+Estimate ATT using the first set of weights and the `marginaleffects::avg_comparisons` function.
+
+```{r}
+avg_comparisons(fit1, variables = "treat",
+                vcov = "HC3",
+                newdata = subset(LaLonde, treat == 1),
+                wts = "weights1")
+```
+
+Estimate ATT using the second set of weights and the `marginaleffects::avg_comparisons` function.
+
+```{r}
+avg_comparisons(fit2, 
+                variables = "treat",
+                vcov = "HC3",
+                newdata = subset(LaLonde, treat == 1),
+                wts = "weights2")
+```
+
+Compare QTT.
+
+```{r}
+data.frame(q = seq(0.1, 0.9, 0.1),
+           QTT1 = with(subset(LaLonde, treat == 1), weightedQuantile(re78, weights1, seq(0.1, 0.9, 0.1))) - 
+             with(subset(LaLonde, treat == 0), weightedQuantile(re78, weights1, seq(0.1, 0.9, 0.1))),
+           QTT2 = with(subset(LaLonde, treat == 1), weightedQuantile(re78, weights2, seq(0.1, 0.9, 0.1))) - 
+             with(subset(LaLonde, treat == 0), weightedQuantile(re78, weights2, seq(0.1, 0.9, 0.1))))
+```
+
+For this dataset we do not see significant differences.
+
