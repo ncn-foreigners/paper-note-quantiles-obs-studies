@@ -3250,7 +3250,7 @@ Adjusted    574.36     297</code></pre>
 </div>
 </div>
 </div>
-<p>Fit two models. We do not add <code>*_50</code> variables as they are only used to calibrate the weights.</p>
+<p>Fit two models. We do not add <code>*_50</code> and <code>*_75</code> variables as they are only used to calibrate the weights.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>fit1 <span class="ot">&lt;-</span> <span class="fu">lm</span>(re78 <span class="sc">~</span> treat <span class="sc">*</span> (age <span class="sc">+</span> educ <span class="sc">+</span> black <span class="sc">+</span> hisp <span class="sc">+</span> married <span class="sc">+</span> nodegr <span class="sc">+</span> re74 <span class="sc">+</span> re75),</span>
 <span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>           <span class="at">data =</span> LaLonde, <span class="at">weights =</span> weights1)</span>

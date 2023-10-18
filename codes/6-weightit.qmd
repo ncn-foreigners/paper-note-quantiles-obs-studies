@@ -167,7 +167,7 @@ data.frame(vars = rownames(tab1$Balance)[1:8],
 ```
 
 
-Fit two models. We do not add `*_50` variables as they are only used to calibrate the weights. 
+Fit two models. We do not add `*_50` and `*_75` variables as they are only used to calibrate the weights. 
 
 ```{r}
 fit1 <- lm(re78 ~ treat * (age + educ + black + hisp + married + nodegr + re74 + re75),
