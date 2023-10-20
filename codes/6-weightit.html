@@ -3103,15 +3103,24 @@ Adjusted    574.36     297</code></pre>
 </section>
 <section id="entropy-balancing-with-proposed-approach-new-implementation" class="level2" data-number="3.4">
 <h2 data-number="3.4" class="anchored" data-anchor-id="entropy-balancing-with-proposed-approach-new-implementation"><span class="header-section-number">3.4</span> Entropy balancing with proposed approach – new implementation</h2>
-<p>Now, we will use the approach implemented in the new version of <code>WeightIt</code>. Note that <code>weightit</code> uses <code>plogis</code> as in the example above.</p>
+<p>Now, we will use the approach implemented in the new version of <code>WeightIt</code>. Note that</p>
+<ul>
+<li><code>weightit()</code> uses <code>plogis</code> as in the example above,</li>
+<li><code>weightit()</code> does not allow to balance on quantiles only.</li>
+</ul>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>ebal_result3 <span class="ot">&lt;-</span> <span class="fu">weightit</span>(treat <span class="sc">~</span> age <span class="sc">+</span> educ <span class="sc">+</span> black <span class="sc">+</span> hisp <span class="sc">+</span> married <span class="sc">+</span> nodegr <span class="sc">+</span> re74 <span class="sc">+</span> re75,</span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>                          <span class="at">data =</span> LaLonde, <span class="at">estimand =</span> <span class="st">&quot;ATT&quot;</span>, <span class="at">method =</span> <span class="st">&quot;ebal&quot;</span>,</span>
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>ebal_result3 <span class="ot">&lt;-</span> <span class="fu">weightit</span>(<span class="at">formula =</span> treat <span class="sc">~</span> age <span class="sc">+</span> educ <span class="sc">+</span> black <span class="sc">+</span> hisp <span class="sc">+</span> married <span class="sc">+</span> nodegr <span class="sc">+</span> re74 <span class="sc">+</span> re75,</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>                         <span class="at">data =</span> LaLonde, <span class="at">estimand =</span> <span class="st">&quot;ATT&quot;</span>, <span class="at">method =</span> <span class="st">&quot;ebal&quot;</span>,</span>
 <span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>                         <span class="at">quantile =</span> <span class="fu">list</span>(<span class="at">age =</span> <span class="fu">c</span>(<span class="fl">0.50</span>, <span class="fl">0.75</span>), </span>
 <span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>                                         <span class="at">educ =</span> <span class="fu">c</span>(<span class="fl">0.50</span>, <span class="fl">0.75</span>),</span>
 <span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>                                         <span class="at">re74 =</span> <span class="fu">c</span>(<span class="fl">0.50</span>, <span class="fl">0.75</span>), </span>
 <span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>                                         <span class="at">re75 =</span> <span class="fu">c</span>(<span class="fl">0.50</span>, <span class="fl">0.75</span>)))</span>
-<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(ebal_result3)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a><span class="co"># alternatively</span></span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>ebal_result3 <span class="ot">&lt;-</span> <span class="fu">weightit</span>(<span class="at">formula =</span> treat <span class="sc">~</span> age <span class="sc">+</span> educ <span class="sc">+</span> black <span class="sc">+</span> hisp <span class="sc">+</span> married <span class="sc">+</span> nodegr <span class="sc">+</span> re74 <span class="sc">+</span> re75,</span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>                         <span class="at">data =</span> LaLonde, <span class="at">estimand =</span> <span class="st">&quot;ATT&quot;</span>, <span class="at">method =</span> <span class="st">&quot;ebal&quot;</span>,</span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>                         <span class="at">quantile =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="fl">0.50</span>, <span class="fl">0.75</span>)))</span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(ebal_result3)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>                 Summary of weights
 
