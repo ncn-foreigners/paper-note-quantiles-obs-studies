@@ -129,15 +129,23 @@ plot(x=ebal_result1$weights, y=ebal_result2$weights,
 
 ## Entropy balancing with proposed approach -- new implementation
 
-Now, we will use the approach implemented in the new version of `WeightIt`. Note that `weightit` uses `plogis` as in the example above.
+Now, we will use the approach implemented in the new version of `WeightIt`. Note that 
+
++ `weightit()` uses `plogis` as in the example above,
++ `weightit()` does not allow to balance on quantiles only. 
 
 ```{r}
-ebal_result3 <- weightit(treat ~ age + educ + black + hisp + married + nodegr + re74 + re75,
-                          data = LaLonde, estimand = "ATT", method = "ebal",
+ebal_result3 <- weightit(formula = treat ~ age + educ + black + hisp + married + nodegr + re74 + re75,
+                         data = LaLonde, estimand = "ATT", method = "ebal",
                          quantile = list(age = c(0.50, 0.75), 
                                          educ = c(0.50, 0.75),
                                          re74 = c(0.50, 0.75), 
                                          re75 = c(0.50, 0.75)))
+# alternatively
+ebal_result3 <- weightit(formula = treat ~ age + educ + black + hisp + married + nodegr + re74 + re75,
+                         data = LaLonde, estimand = "ATT", method = "ebal",
+                         quantile = list(c(0.50, 0.75)))
+
 summary(ebal_result3)
 ```
 
