@@ -129,7 +129,7 @@ plot(x=ebal_result1$weights, y=ebal_result2$weights,
 
 ## Entropy balancing with proposed approach -- new implementation
 
-Now, we will use the approach implemented in the new version of `WeightIt`.
+Now, we will use the approach implemented in the new version of `WeightIt`. Note that `weightit` uses `plogis` as in the example above.
 
 ```{r}
 ebal_result3 <- weightit(treat ~ age + educ + black + hisp + married + nodegr + re74 + re75,
