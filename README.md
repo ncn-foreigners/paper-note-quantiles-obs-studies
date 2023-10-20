@@ -5,7 +5,8 @@
 
 Here is the first version of the paper: [“Survey calibration for causal
 inference: a simple method to balance covariate
-distributions”](paper/2023-beresewicz-causal-balancing.pdf) (2023.10.14)
+distributions”](paper/2023-beresewicz-causal-balancing.pdf) (2023.10.14,
+[arxiv verion](https://arxiv.org/abs/2310.11969))
 
 # Acknowledgements
 
