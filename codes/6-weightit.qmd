@@ -32,9 +32,7 @@ library(laeken) ## for weighted quantiles
 library(CBPS) ## for LaLonde data
 ```
 
-# Data and examples
-
-## Data
+# Data
 Load data (3212 rows)
 
 ```{r}
@@ -48,6 +46,8 @@ Compare means with `cobalt::bal.tab`.
 bal.tab(treat ~ age + educ + black + hisp + married + nodegr + re74 + re75,
         data = LaLonde, estimand = "ATT", thresholds = c(m = .05))
 ```
+
+# Entropy balancing
 
 ## Standard entropy balancing
 
@@ -256,3 +256,65 @@ data.frame(q = seq(0.1, 0.9, 0.1),
 ```
 
 Some differences are observed from 0.6-quantile.
+
+# Covariate balancing propensity score
+
+Note that for this dataset we will not obtain balance and thus the codes are only for demonstration.
+
+## Standard CBPS
+
+```{r}
+cbps_result1 <- weightit(treat ~ age + educ + black + hisp + married + nodegr + re74 + re75,
+                         data = LaLonde, estimand = "ATE", method = "cbps", over = FALSE)
+summary(cbps_result1)
+```
+
+```{r}
+bal.tab(cbps_result1, stats = c("m", "v", "ks"), thresholds = c(m = .05))
+```
+
+
+## CBPS with quantiles
+
+Unfortunately, currently `quantile` is not possible with `method = "cbps"`. Thus I am ading new `*_50` and `*_75` to the formulae. 
+
+```{r}
+cbps_result2 <- weightit(treat ~ age + educ + black + hisp + married + nodegr + re74 + re75 +
+                            age_50 + educ_50 + re74_50 + re75_50 + 
+                            age_75 + educ_75 + re74_75 + re75_75,
+                          data = LaLonde, estimand = "ATE", method = "cbps", over = FALSE)
+summary(cbps_result2)
+```
+
+```{r}
+bal.tab(cbps_result2, stats = c("m", "v", "ks"), thresholds = c(m = .05))
+```
+
+
+## Non-parametric CBPS (TBA)
+
+```{r , eval = F}
+npcbps_result1 <- weightit(treat ~ age + educ + black + hisp + married + nodegr + re74 + re75,
+                         data = LaLonde, estimand = "ATE", method = "npcbps", over = FALSE)
+summary(npcbps_result1)
+```
+
+```{r , eval = F}
+bal.tab(npcbps_result1, stats = c("m", "v", "ks"), thresholds = c(m = .05))
+```
+
+
+## npCBPS with quantiles
+
+```{r , eval = F}
+npcbps_result2 <- weightit(treat ~ age + educ + black + hisp + married + nodegr + re74 + re75,
+                           data = LaLonde, estimand = "ATE", method = "npcbps", over = FALSE,
+                           quantile = list(c(0.50, 0.75)))
+summary(npcbps_result2)
+```
+
+```{r , eval = F}
+bal.tab(npcbps_result2, stats = c("m", "v", "ks"), thresholds = c(m = .05))
+```
+
+
