@@ -24,11 +24,19 @@ the `kbal` package used in the [Hazlett
 (2020)](https://www3.stat.sinica.edu.tw/statistica/j30n3/J30N32/J30N32.html)
 are available only on github.
 
+**UPDATE**: as of 2023.10.19 (version: 0.14.2.9001) the `WeightIt`
+package implements methods proposed in my paper (yay!). See [WeightIt
+NEWS.md file](https://github.com/ngreifer/WeightIt/blob/master/NEWS.md)
+and the documentation of `ebal`, `npcbps`, `optweight` and `energy`.
+Importantly, [Noah Greifer](https://github.com/ngreifer) implementation
+allows for multinomial treatment studies.
+
 ``` r
 install.packages(c("remotes", "ebal", "mvnfast", "data.table", "ggplot2", "laeken", "xtable", "glue", "stringr"))
 remotes::install_github("ncn-foreigners/jointCalib@dev")
 remotes::install_github("chadhazlett/KBAL")
 remotes::install_github("pedrohcgs/IPS") 
+remotes::install_github("ngreifer/WeightIt") ## 0.14.2.9001
 ```
 
 ## Notebooks and results

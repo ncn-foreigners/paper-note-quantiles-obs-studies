@@ -20,16 +20,7 @@ lang: en
 
 Here is a minimal example of how to use the [`WeightIt`](https://cran.r-project.org/package=WeightIt) package with the proposed approach.
 
-**UPDATE**: as of 2023.10.19 (last commit `0d819c088bc99350f7ab3808042e36683558dfac`) the `WeightIt` package implements methods proposed in my paper (yay!). See [news.md](https://github.com/ngreifer/WeightIt/blob/master/NEWS.md) and the documentation of `ebal`, `npcbps`, `optweight`, and `energy`. What is important, [Noah Greifer](https://github.com/ngreifer) has already implemented this approch for multinomial treatment studies.
-
 # Installation
-
-Install development version of `Weighit` package from https://github.com/ngreifer/WeightIt.
-
-```{r eval = FALSE}
-install.packages("remotes")
-remotes::install_github("ngreifer/WeightIt")
-```
 
 Load packages
 
