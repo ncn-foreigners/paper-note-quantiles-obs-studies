@@ -16,7 +16,20 @@ toc-title: Contents
 lang: en
 ---
 
+# Introduction
+
 Here is a minimal example of how to use the [`WeightIt`](https://cran.r-project.org/package=WeightIt) package with the proposed approach.
+
+**UPDATE**: as of 2023.10.19 (last commit `0d819c088bc99350f7ab3808042e36683558dfac`) the `WeightIt` package implements methods proposed in my paper (yay!). See [news.md](https://github.com/ngreifer/WeightIt/blob/master/NEWS.md) and the documentation of `ebal`, `npcbps`, `optweight`, and `energy`. What is important, [Noah Greifer](https://github.com/ngreifer) has already implemented this approch for multinomial treatment studies.
+
+# Installation
+
+Install development version of `Weighit` package from https://github.com/ngreifer/WeightIt.
+
+```{r eval = FALSE}
+install.packages("remotes")
+remotes::install_github("ngreifer/WeightIt")
+```
 
 Load packages
 
@@ -28,6 +41,9 @@ library(laeken) ## for weighted quantiles
 library(CBPS) ## for LaLonde data
 ```
 
+# Data and examples
+
+## Data
 Load data (3212 rows)
 
 ```{r}
@@ -37,11 +53,12 @@ head(LaLonde)
 
 Compare means with `cobalt::bal.tab`.
 
-
 ```{r}
 bal.tab(treat ~ age + educ + black + hisp + married + nodegr + re74 + re75,
         data = LaLonde, estimand = "ATT", thresholds = c(m = .05))
 ```
+
+## Standard entropy balancing
 
 Initial weighting with entropy balancing.
 
@@ -56,6 +73,8 @@ Balance statistics after entropy balancing.
 ```{r}
 bal.tab(ebal_result1, stats = c("m", "v", "ks"), thresholds = c(m = .05))
 ```
+
+## Entropy balancing with proposed approach -- step-by-step
 
 Now calculate quantiles for continuous variables for the treatment group.
 
@@ -116,6 +135,38 @@ plot(x=ebal_result1$weights, y=ebal_result2$weights,
      xlab = "ebal with means", 
      ylab = "ebal with means and medians")
 ```
+
+## Entropy balancing with proposed approach -- new implementation
+
+Now, we will use the approach implemented in the new version of `WeightIt`.
+
+```{r}
+ebal_result3 <- weightit(treat ~ age + educ + black + hisp + married + nodegr + re74 + re75,
+                          data = LaLonde, estimand = "ATT", method = "ebal",
+                         quantile = list(age = c(0.50, 0.75), 
+                                         educ = c(0.50, 0.75),
+                                         re74 = c(0.50, 0.75), 
+                                         re75 = c(0.50, 0.75)))
+summary(ebal_result3)
+```
+
+Check balance but note that variables listed in `quantile` are not reported. They are treated in a similar way as matching 2nd etc moments. 
+
+```{r}
+bal.tab(ebal_result3, stats = c("m", "v", "ks"), thresholds = c(m = .05))
+```
+
+Compare distribution of weights.
+
+```{r}
+plot(x=ebal_result2$weights, y=ebal_result3$weights, 
+     xlim = c(0, 15), ylim = c(0, 15),
+     xlab = "proposed approach (step-by-step)", 
+     ylab = "weightit with proposed approach")
+```
+
+## Results
+
 Add both weights to the `LaLonde` data.frame.
 
 ```{r}
