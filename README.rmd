@@ -6,7 +6,7 @@ output: github_document
 
 # Paper
 
-Here is the first version of the paper: ["Survey calibration for causal inference: a simple method to balance covariate distributions"](paper/2023-beresewicz-causal-balancing.pdf) (2023.10.14, [arxiv version](https://arxiv.org/abs/2310.11969))
+Here is the first version of the paper: ["Survey calibration for causal inference: a simple method to balance covariate distributions"](paper/2023-beresewicz-causal-balancing-new.pdf) (2023.10.14, [arxiv version](https://arxiv.org/abs/2310.11969))
 
 
 # Acknowledgements
