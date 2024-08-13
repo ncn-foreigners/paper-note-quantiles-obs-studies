@@ -32,54 +32,87 @@ options(xtable.include.rownames = FALSE)
 # Result for the simulation 1 -- entropy balancing
 
 ```{r}
-sim1_results <- readRDS("../results/sim1-ebal.rds")
+sim1_results <- readRDS("../results/sim1-ebal-updated.rds")
 sim1_results[is.na(tau), est_p := est]
 sim1_results[!is.na(tau), est_p := paste0(est, " (", str_pad(tau,4,"right", "0"), ")")]
 sim1_results[, est_p:=factor(est_p, 
-                             c("att", "qtt (0.10)", "qtt (0.25)", "qtt (0.50)", "qtt (0.75)", "qtt (0.90)"),
-                             c("ATT", "QTT (0.10)", "QTT (0.25)", "QTT (0.50)", "QTT (0.75)", "QTT (0.90)"))]
-sim1_results[, we:=factor(weight, c("w_ebal", "w_kbal", "w_mq1", "w_mp1"), c("EB", "KEB", "DEB MQ", "DEB MD"))]
+                             c("balance", "att", "qtt (0.10)", "qtt (0.25)", "qtt (0.50)", "qtt (0.75)", "qtt (0.90)"),
+                             c("bal", "ATT", "QTT (0.10)", "QTT (0.25)", "QTT (0.50)", "QTT (0.75)", "QTT (0.90)"))]
+
+sim1_results[, method:=str_remove(method, "w_")]
+
+sim1_results[, method_l:=factor(method, c("ebal", "kbal", "deb1", "deb2"), c("EB", "KEB", "DEB MQ", "DEB MD"))]
 ```
 
 Table 1
 
 ```{r}
-sim1_results[var == "y3", 
-             .(Bias = mean(value), Var = var(value), RMSE = sqrt(mean(value)^2 + var(value))),
-             .(design, est_p, we)] |> 
-  melt(id.vars = c("design", "est_p", "we")) |> 
-  dcast(variable + we + design ~ est_p, value.var = "value") |> 
-  {\(x) x[order(design, variable, we)]}() |>
+sim1_results[var == "y3" & est_p != "bal", 
+             .(Bias = mean(treat), Var = var(treat), RMSE = sqrt(mean(treat)^2 + var(treat))),
+             .(design, est_p, method_l)] |> 
+  melt(id.vars = c("design", "est_p", "method_l")) |> 
+  dcast(variable + method_l + design ~ est_p, value.var = "value") |> 
+  {\(x) x[order(design, variable, method_l)]}() |>
   ## uncomment for xtable
   transform(design = NULL) #|>
   #xtable(digits = 4)
 ```
 
+Balance and ESS
+
+```{r}
+sim1_results[est_p == "bal", .(rep,design, method_l, x1,x2,x3,x4,x5,x6,ess)] |>
+  melt(id.vars = c("rep", "design", "method_l")) |>
+  aggregate(value ~ variable + design + method_l, data = _, FUN = mean) |>
+  transform(value = ifelse(variable != "ess", value*100, value)) |>
+  dcast(data=_, design + method_l ~ variable, value.var = "value") |>
+  xtable()
+```
+
+
+```{r}
+sim1_results[est_p == "bal", .(rep,design, method_l, x1,x2,x3,x4,x5,x6,ess)] |>
+  melt(id.vars = c("rep", "design", "method_l")) |>
+  subset(variable != "ess") |>
+  ggplot(data = _, aes(x = method_l, y = value)) +
+  geom_boxplot() +
+  facet_grid(design~variable)
+
+sim1_results[est_p == "bal", .(rep,design, method_l, x1,x2,x3,x4,x5,x6,ess)] |>
+  melt(id.vars = c("rep", "design", "method_l")) |>
+  subset(variable == "ess") |>
+  ggplot(data = _, aes(x = method_l, y = value)) +
+  geom_jitter(alpha=0.1) + 
+  geom_boxplot() +
+  facet_grid(variable~design)
+
+```
+
 Table A1 in Appendix
 
 ```{r}
-sim1_results[var == "y1", 
-             .(Bias = mean(value), Var = var(value), RMSE = sqrt(mean(value)^2 + var(value))),
-             .(design, est_p, we)] |> 
-  melt(id.vars = c("design", "est_p", "we")) |> 
-  dcast(variable + we + design ~ est_p, value.var = "value") |> 
-  {\(x) x[order(design, variable, we)]}() |>
+sim1_results[var == "y1" & est_p != "bal", 
+             .(Bias = mean(treat), Var = var(treat), RMSE = sqrt(mean(treat)^2 + var(treat))),
+             .(design, est_p, method_l)] |> 
+  melt(id.vars = c("design", "est_p", "method_l")) |> 
+  dcast(variable + method_l + design ~ est_p, value.var = "value") |> 
+  {\(x) x[order(design, variable, method_l)]}() |>
   ## uncomment for xtable
-  transform(design = NULL) #|> 
+  transform(design = NULL) #|>
   #xtable(digits = 4)
 ```
 
 Table A2 in the Appendix
 
 ```{r}
-sim1_results[var == "y2", 
-             .(Bias = mean(value), Var = var(value), RMSE = sqrt(mean(value)^2 + var(value))),
-             .(design, est_p, we)] |> 
-  melt(id.vars = c("design", "est_p", "we")) |> 
-  dcast(variable + we + design ~ est_p, value.var = "value") |> 
-  {\(x) x[order(design, variable, we)]}() |>
+sim1_results[var == "y2" & est_p != "bal", 
+             .(Bias = mean(treat), Var = var(treat), RMSE = sqrt(mean(treat)^2 + var(treat))),
+             .(design, est_p, method_l)] |> 
+  melt(id.vars = c("design", "est_p", "method_l")) |> 
+  dcast(variable + method_l + design ~ est_p, value.var = "value") |> 
+  {\(x) x[order(design, variable, method_l)]}() |>
   ## uncomment for xtable
-  transform(design = NULL) #|> 
+  transform(design = NULL) #|>
   #xtable(digits = 4)
 ```
 
@@ -87,11 +120,11 @@ Additional plots
 
 ```{r}
 for (des in c("d1", "d2", "d3")) {
-  sim1_results[, .(Bias = mean(value), SE = sd(value), RMSE = sqrt(mean(value)^2 + var(value))),
-             .(design, est_p, we, var)] |> 
-      melt(id.vars = c("design", "est_p", "we", "var")) |> 
+  sim1_results[est_p != "bal", .(Bias = mean(treat), SE = sd(treat), RMSE = sqrt(mean(treat)^2 + var(treat))),
+             .(design, est_p, method_l, var)] |> 
+      melt(id.vars = c("design", "est_p", "method_l", "var")) |> 
       subset(design == des) |> 
-      ggplot(data = _, aes(x = est_p, y = value, fill = we)) +
+      ggplot(data = _, aes(x = est_p, y = value, fill = method_l)) +
       geom_col(position = "dodge", color = "black") +
       facet_grid(var ~ variable , scales = "free", 
                  labeller = labeller(var = c("y1"="Y1\nlinear",
@@ -108,8 +141,8 @@ for (des in c("d1", "d2", "d3")) {
 Boxplots
 
 ```{r}
-sim1_results |> 
-  ggplot(data = _, aes(x = est_p, y = value, color = we)) +
+sim1_results[est_p != "bal"] |> 
+  ggplot(data = _, aes(x = est_p, y = treat, color = method_l)) +
   geom_hline(yintercept = 0, linetype = "dashed") + 
   geom_boxplot(outlier.size = 0.5, size = 0.3) +
   facet_grid(var ~ design, scale = "free_y",

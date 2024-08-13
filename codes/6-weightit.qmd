@@ -126,6 +126,19 @@ plot(x=ebal_result1$weights, y=ebal_result2$weights,
      xlab = "ebal with means", 
      ylab = "ebal with means and medians")
 ```
+Estimation of the standard errors
+
+```{r}
+fit1 <- lm_weightit(re78 ~ treat, data = LaLonde,
+                    weightit = ebal_result1)
+summary(fit1)
+```
+
+```{r}
+fit2 <- lm_weightit(re78 ~ treat, data = LaLonde,
+                    weightit = ebal_result2)
+summary(fit2)
+```
 
 ## Entropy balancing with proposed approach -- new implementation
 
@@ -290,6 +303,19 @@ summary(cbps_result2)
 bal.tab(cbps_result2, stats = c("m", "v", "ks"), thresholds = c(m = .05))
 ```
 
+Estimate standard errors for both approaches
+
+```{r}
+fit_cbps1 <- lm_weightit(re78 ~ treat, data = LaLonde,
+                         weightit = cbps_result1)
+summary(fit_cbps1)
+```
+
+```{r}
+fit_cbps2 <- lm_weightit(re78 ~ treat, data = LaLonde,
+                         weightit = cbps_result2)
+summary(fit_cbps2)
+```
 
 ## Non-parametric CBPS (TBA)
 

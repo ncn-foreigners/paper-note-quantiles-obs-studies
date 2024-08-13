@@ -22,13 +22,29 @@ lang: en
 Load required packages
 
 ```{r load-packages}
-library(jointCalib)
-library(ebal) 
 library(kbal)  ## it takes a lot of time to perform 500 simulations
 library(mvnfast)
+library(WeightIt)
+library(cobalt)
+
+## processing
 library(data.table)
 library(ggplot2)
 library(laeken)
+
+## parallel
+library(doSNOW)
+library(progress)
+library(foreach)
+```
+
+Setup for simulation
+
+
+Read functions
+
+```{r}
+source("functions.R")
 ```
 
 # Simulation from the paper
@@ -50,13 +66,27 @@ Sigma <- matrix(c(2, 1, -1,
                 nrow=3, 
                 ncol=3)
 
-B <- 500
 tau <- c(0.10, 0.25, 0.5, 0.75, 0.9)
-result_total <- list()
+probs1 <- c(0.25, 0.5, 0.75)
+probs2 <- seq(0.1, 0.9,0.1)
 
-for (b in 1:B) {
-  set.seed(b)
-  if (b %% 50 == 0) print(b)
+sims <- 16
+cores <- 8
+
+set.seed(2024)
+
+cl <- makeCluster(cores)
+registerDoSNOW(cl)
+pb <- progress_bar$new(format = "[:bar] :percent [Elapsed: :elapsedfull || Remaining: :eta]",
+                       total = sims)
+opts <- list(progress = \(n) pb$tick())
+
+results_simulation1 <- foreach(
+  k=1:sims, 
+  .combine = rbind, 
+  .packages = c("mvnfast", "kbal", "WeightIt", "cobalt", "kbal", "data.table", "laeken"), 
+  .options.snow = opts) %dopar% {
+  
   x123 <- rmvn(n=n, mu=mu, sigma=Sigma)
   x1 <- x123[,1]
   x2 <- x123[,2]
@@ -72,9 +102,11 @@ for (b in 1:B) {
   d2 <- as.numeric((x1 + 2*x2 -2*x3 -x4 -0.5*x5 +x6 + ep2) > 0)
   d3 <- as.numeric((x1 + 2*x2 -2*x3 -x4 -0.5*x5 +x6 + ep3) > 0)
   eta <- rnorm(n)
+  
   y1 <- x1 + x2 + x3 - x4 + x5 + x6 + eta
   y2 <- x1 + x2 + 0.2*x3*x4 - sqrt(x5) + eta
   y3 <- (x1 + x2 + x5)^2 + eta
+  
   df <- data.frame(id =1:n, x1,x2,x3,x4,x5,x6,d1,d2,d3,y1,y2,y3) |> setDT()
   df_long <- melt(df, id.vars = c(1:7,11:13), value.name = "treatment", variable.name = "design")
   
@@ -83,51 +115,75 @@ for (b in 1:B) {
   y_results <- list()
 
   for (des in c("d1", "d2", "d3")) {
+    
     df_long_des <- df_long[design == des]
-    ebal_res <- ebalance(Treatment = df_long_des$treatment, 
-                         X = model.matrix( ~ -1 + x1 + x2 + x3 + x4 + x5 + x6, df_long_des), 
-                         print.level = -1)
     
-    ## comment this to remove kbal result
-    kbal_res <- kbal(allx = model.matrix( ~ -1 + x1 + x2 + x3 + x4 + x5 + x6, df_long_des),
-                     b= 6,
-                     mixed_data = TRUE,
-                     cat_columns = "x6",
-                     treatment = df_long_des$treatment,
-                     fullSVD = TRUE,
-                     printprogress = FALSE)
-    ## comment this to remove kbal result
+    ebal_res <- weightit(formula = treatment ~ x1 + x2 + x3 + x4 + x5 + x6,
+                         data = df_long_des, estimand = "ATT", method = "ebal")
     
-    mq1_res <- joint_calib_att(formula_means = ~ x1 + x2 + x3 + x4 + x5 + x6,
-                               formula_quantiles = ~ x1 + x2 + x3 + x4 + x5,
-                               treatment = ~ treatment,
-                               data = as.data.frame(df_long_des),
-                               method = "eb")
-    mp1_res <- joint_calib_att(formula_means = ~ x1 + x2 + x3 + x4 + x5 + x6,
-                               formula_quantiles = ~ x1 + x2 + x3 + x4 + x5,
-                               treatment = ~ treatment,
-                               data = as.data.frame(df_long_des),
-                               probs = seq(0.1, 0.9, 0.1),
-                               method = "eb") 
+    kbal_res <- weightit(formula = treatment ~ x1 + x2 + x3 + x4 + x5 + x6,
+                          data = df_long_des, method = kbal.fun, estimand = "ATT",
+                          include.obj = TRUE)
+  
+    deb_res1 <- weightit(formula = treatment ~ x1 + x2 + x3 + x4 + x5 + x6,
+                         data = df_long_des, estimand = "ATT", method = "ebal",
+                         quantile = list(x1=probs1, x2=probs1,x3=probs1,x4=probs1,x5=probs1))
     
-    df_long_des[treatment == 0, ":="(w_ebal=ebal_res$w, w_mq1=mq1_res$g, w_mp1=mp1_res$g)]
-    df_long_des[treatment == 1, ":="(w_ebal=1,          w_mq1=1,         w_mp1=1)]
+    deb_res2 <- weightit(formula = treatment ~ x1 + x2 + x3 + x4 + x5 + x6,
+                         data = df_long_des, estimand = "ATT", method = "ebal",
+                         quantile = list(x1=probs2, x2=probs2,x3=probs2,x4=probs2,x5=probs2))
     
-    ## comment this to remove kbal result
-    df_long_des[, w_kbal := kbal_res$w]
-    ## comment this to remove kbal result
+    if (any(deb_res2$weights == 0)) {
+      print("some errors occured")
+      next
+    }
     
-    y1_res <- df_long_des[, lapply(.SD, 
-                          FUN = function(x) weighted.mean(y1[treatment==1], x[treatment==1]) - weighted.mean(y1[treatment==0], x[treatment==0])), 
-                         .SDcols = patterns("w_")][, ":="(var="y1", est="att", tau=NA)]
-    y2_res <- df_long_des[, lapply(.SD, 
-                          FUN = function(x) weighted.mean(y2[treatment==1], x[treatment==1]) - weighted.mean(y2[treatment==0], x[treatment==0])), 
-                         .SDcols = patterns("w_")][, ":="(var="y2", est="att", tau=NA)]
+    df_long_des[, ":="(w_ebal = ebal_res$weights, 
+                       w_kbal = kbal_res$weights,
+                       w_deb1  = deb_res1$weights, 
+                       w_deb2  = deb_res2$weights)]
     
-    y3_res <- df_long_des[, lapply(.SD, 
-                          FUN = function(x) weighted.mean(y3[treatment==1], x[treatment==1]) - weighted.mean(y3[treatment==0], x[treatment==0])), 
-                         .SDcols = patterns("w_")][, ":="(var="y3", est="att", tau=NA)]
+    weightit_obj <- list(ebal=ebal_res, 
+                         kbal=kbal_res, 
+                         deb1=deb_res1, 
+                         deb2=deb_res2)
+
+    ebal_res_y1 <- lm_weightit(y1 ~ treatment, data = df_long_des, weightit = ebal_res)
+    ebal_res_y2 <- lm_weightit(y2 ~ treatment, data = df_long_des, weightit = ebal_res)
+    ebal_res_y3 <- lm_weightit(y3 ~ treatment, data = df_long_des, weightit = ebal_res)
     
+    kbal_res_y1 <- lm_weightit(y1 ~ treatment, data = df_long_des, weightit = kbal_res)
+    kbal_res_y2 <- lm_weightit(y2 ~ treatment, data = df_long_des, weightit = kbal_res)
+    kbal_res_y3 <- lm_weightit(y3 ~ treatment, data = df_long_des, weightit = kbal_res)
+    
+    deb_res1_y1 <- lm_weightit(y1 ~ treatment, data = df_long_des, weightit = deb_res1)
+    deb_res1_y2 <- lm_weightit(y2 ~ treatment, data = df_long_des, weightit = deb_res1)
+    deb_res1_y3 <- lm_weightit(y3 ~ treatment, data = df_long_des, weightit = deb_res1)
+    
+    deb_res2_y1 <- lm_weightit(y1 ~ treatment, data = df_long_des, weightit = deb_res2)
+    deb_res2_y2 <- lm_weightit(y2 ~ treatment, data = df_long_des, weightit = deb_res2)
+    deb_res2_y3 <- lm_weightit(y3 ~ treatment, data = df_long_des, weightit = deb_res2)
+    
+    ## save into one data.frame
+    weightit_results <- list(ebal_res_y1, ebal_res_y2, ebal_res_y3,
+                             kbal_res_y1, kbal_res_y2, kbal_res_y3,
+                             deb_res1_y1, deb_res1_y2, deb_res1_y3,
+                             deb_res2_y1, deb_res2_y2, deb_res2_y3)
+    
+    coefs <- sapply(weightit_results, \(x) coef(x)[2])
+    cis <- lapply(weightit_results, \(x) confint(x)[2, ])
+    cis <- do.call("rbind", cis)
+    
+    weightit_df <- data.table(treat = coefs, ci_low = cis[, 1], ci_upp = cis[, 2], est = "att", tau = NA)
+    
+    weightit_df[, method := c("ebal_y1", "ebal_y2", "ebal_y3",
+                              "kbal_y1", "kbal_y2", "kbal_y3",
+                              "deb1_y1", "deb1_y2", "deb1_y3",
+                              "deb2_y1", "deb2_y2", "deb2_y3")]
+    
+    weightit_df[, c("method", "var"):=tstrsplit(method, "_")] 
+    
+    ## quantiles
     y1_res_q <- df_long_des[, lapply(.SD, 
                           FUN = function(x) weightedQuantile(y1[treatment==1], x[treatment==1], tau) - 
                                             weightedQuantile(y1[treatment==0], x[treatment==0],tau)), 
@@ -135,22 +191,41 @@ for (b in 1:B) {
     
     y2_res_q <- df_long_des[, lapply(.SD, 
                           FUN = function(x) weightedQuantile(y2[treatment==1], x[treatment==1], tau) - 
-                                            weightedQuantile(y2[treatment==0], x[treatment==0],tau)), 
+                                            weightedQuantile(y2[treatment==0], x[treatment==0], tau)), 
                          .SDcols = patterns("w_")][, ":="(var="y2", est="qtt", tau=tau)]
     
     y3_res_q <- df_long_des[, lapply(.SD, 
                           FUN = function(x) weightedQuantile(y3[treatment==1], x[treatment==1], tau) - 
                                             weightedQuantile(y3[treatment==0], x[treatment==0],tau)), 
                          .SDcols = patterns("w_")][, ":="(var="y3", est="qtt", tau=tau)]
-
     
-    y_results[[des]] <- rbind(y1_res,y2_res,y3_res, y1_res_q, y2_res_q, y3_res_q)
+    res_quantiles <- rbind(y1_res_q, y2_res_q, y3_res_q) |>
+      melt(id.vars = c("var", "est", "tau"), value.name = "treat", variable.name = "method")
+    
+
+    ## quality information
+    ## ks.adj
+    weightit_quality <- lapply(weightit_obj, bal.tab, stats = c("m", "v", "ks"), thresholds = c(m = .05))
+    weightit_bal <- lapply(weightit_quality, "[[", "Balance")
+    weightit_bal <- lapply(weightit_bal, "[[", "KS.Adj")
+    weightit_bal <- do.call("rbind", weightit_bal) |> as.data.table()
+    names(weightit_bal) <- paste0("x", 1:6)
+    weightit_bal[, method := names(weightit_obj)]
+    weightit_bal[, est := "balance"]
+    
+    ## ESS
+    weightit_ess <- sapply(weightit_quality, \(x) x$Observations$Control[2])
+    weightit_bal[, ess := weightit_ess]
+    
+    y_results[[des]] <- rbind(weightit_df, res_quantiles, weightit_bal, fill = T)
 
   }
 
-  result_total[[b]] <- rbindlist(y_results, idcol = "design")
-  
+  rbindlist(y_results, idcol = "design")
+
 }
+
+stopCluster(cl)
 
 ```
 
@@ -165,13 +240,7 @@ Process data and save to `result_total_df` data.frame with names:
 + `value` - estimator value
 
 ```{r transform-results}
-result_total_df <- rbindlist(result_total, idcol = "b") |> 
-  melt(id.vars = c("b", 
-                   "design", 
-                   "var", 
-                   "est", 
-                   "tau"), 
-       variable.name = "weight", value.name = "value")
+result_total_df <- rbindlist(result_total, idcol = "b")
 ```
 
 Save results to RDS 

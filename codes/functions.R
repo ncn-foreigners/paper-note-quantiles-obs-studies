@@ -1,3 +1,49 @@
+## function from kbal adjusted for weightit 
+## source : https://ngreifer.github.io/WeightIt/reference/method_user.html
+
+kbal.fun <- function(treat, covs, estimand, focal, verbose, ...) {
+  args <- list(...)
+  
+  if (!estimand %in% c("ATT", "ATC"))
+    stop("`estimand` must be \"ATT\" or \"ATC\".", call. = FALSE)
+  
+  treat <- as.numeric(treat == focal)
+  
+  args <- args[names(args) %in% names(formals(kbal::kbal))]
+  args$allx <- covs
+  args$treatment <- treat
+  args$printprogress <- verbose
+  args$fullSVD <- TRUE
+  args$b <- ncol(covs)
+  
+  cat_cols <- apply(covs, 2, function(x) length(unique(x)) <= 2)
+  
+  if (all(cat_cols)) {
+    args$cat_data <- TRUE
+    args$mixed_data <- FALSE
+    args$scale_data <- FALSE
+    args$linkernel <- FALSE
+    args$drop_MC <- FALSE
+  }
+  else if (any(cat_cols)) {
+    args$cat_data <- FALSE
+    args$mixed_data <- TRUE
+    args$cat_columns <- colnames(covs)[cat_cols]
+    args$allx[,!cat_cols] <- scale(args$allx[,!cat_cols])
+    args$cont_scale <- 1
+  }
+  else {
+    args$cat_data <- FALSE
+    args$mixed_data <- FALSE
+  }
+  
+  k.out <- do.call(kbal::kbal, args)
+  w <- k.out$w
+  
+  list(w = w, fit.obj = k.out)
+}
+
+
 ## function taken from the paper Sant'Anna, P. H., Song, X., & Xu, Q. (2022). Covariate distribution balance via propensity scores. Journal of Applied Econometrics, 37(6), 1093-1120.
 ## in particular from here: http://qed.econ.queensu.ca/jae/datasets/santanna001/
 
