@@ -1,17 +1,21 @@
-library(kbal)  ## it takes
+library(kbal)  ## it takes couple of hours
 library(mvnfast)
-library(WeightIt)
+library(WeightIt) ## 1.2.1
+library(marginaleffects)
 library(cobalt)
+
 library(data.table)
 library(laeken)
+
 library(doSNOW)
 library(progress)
 library(foreach)
+library(doRNG)
 
 source("codes/functions.R")
 
 cores <- 8
-sims <- 70*cores
+sims <- 2*70*cores ## 1000 iterations
 
 n <- 2000 ## initial sample size
 n_sample <- 1000 ## required sample size n_0=n_1=n (#n control = #n treatment)
@@ -25,20 +29,24 @@ Sigma <- matrix(c(2, 1, -1,
 tau <- c(0.10, 0.25, 0.5, 0.75, 0.9)
 probs1 <- c(0.25, 0.5, 0.75)
 probs2 <- seq(0.1, 0.9,0.1)
+fm1 <- treatment ~ x1 + x2 + x3 + x4 + x5 + x6
+fm2_y1 <- y1 ~ treatment
+fm2_y2 <- y2 ~ treatment
+fm2_y3 <- y3 ~ treatment
 
-
-set.seed(2024)
-
-cl <- makeCluster(cores)
-registerDoSNOW(cl)
 pb <- progress_bar$new(format = "[:bar] :percent [Elapsed: :elapsedfull || Remaining: :eta]",
                        total = sims)
 opts <- list(progress = \(n) pb$tick())
 
+cl <- makeCluster(cores)
+registerDoSNOW(cl)
+
+registerDoRNG(2024)
+
 results_simulation1 <- foreach(
   k=1:sims, 
-  .combine = rbind, 
-  .packages = c("mvnfast", "kbal", "WeightIt", "cobalt", "kbal", "data.table", "laeken"), 
+  .combine = rbind,  
+  .packages = c("mvnfast", "kbal", "WeightIt", "cobalt", "kbal", "data.table", "laeken", "marginaleffects"), 
   .options.snow = opts) %dopar% {
     
     x123 <- rmvn(n=n, mu=mu, sigma=Sigma)
@@ -72,18 +80,28 @@ results_simulation1 <- foreach(
       
       df_long_des <- df_long[design == des]
       
-      ebal_res <- weightit(formula = treatment ~ x1 + x2 + x3 + x4 + x5 + x6,
+      ks_rms <- bal.init(x = model.matrix(~x1+x2+x3+x4+x5+x6-1, data = df_long_des),
+                     treat = df_long_des$treatment,
+                     stat = "ks.rms",
+                     estimand = "ATT")
+      
+      k_dist <- bal.init(x = model.matrix(~x1+x2+x3+x4+x5+x6-1, data = df_long_des),
+                        treat = df_long_des$treatment,
+                        stat = "kernel.dist",
+                        estimand = "ATT")
+
+      ebal_res <- weightit(formula = fm1,
                            data = df_long_des, estimand = "ATT", method = "ebal")
       
-      kbal_res <- weightit(formula = treatment ~ x1 + x2 + x3 + x4 + x5 + x6,
+      kbal_res <- weightit(formula = fm1,
                            data = df_long_des, method = kbal.fun, estimand = "ATT",
                            include.obj = TRUE)
       
-      deb_res1 <- weightit(formula = treatment ~ x1 + x2 + x3 + x4 + x5 + x6,
+      deb_res1 <- weightit(formula = fm1,
                            data = df_long_des, estimand = "ATT", method = "ebal",
                            quantile = list(x1=probs1, x2=probs1,x3=probs1,x4=probs1,x5=probs1))
       
-      deb_res2 <- weightit(formula = treatment ~ x1 + x2 + x3 + x4 + x5 + x6,
+      deb_res2 <- weightit(formula = fm1,
                            data = df_long_des, estimand = "ATT", method = "ebal",
                            quantile = list(x1=probs2, x2=probs2,x3=probs2,x4=probs2,x5=probs2))
       
@@ -102,30 +120,34 @@ results_simulation1 <- foreach(
                            deb1=deb_res1, 
                            deb2=deb_res2)
       
-      ebal_res_y1 <- lm_weightit(y1 ~ treatment, data = df_long_des, weightit = ebal_res)
-      ebal_res_y2 <- lm_weightit(y2 ~ treatment, data = df_long_des, weightit = ebal_res)
-      ebal_res_y3 <- lm_weightit(y3 ~ treatment, data = df_long_des, weightit = ebal_res)
+      ebal_res_y1 <- lm_weightit(fm2_y1, data = df_long_des, weightit = ebal_res)
+      ebal_res_y2 <- lm_weightit(fm2_y2, data = df_long_des, weightit = ebal_res)
+      ebal_res_y3 <- lm_weightit(fm2_y3, data = df_long_des, weightit = ebal_res)
       
-      kbal_res_y1 <- lm_weightit(y1 ~ treatment, data = df_long_des, weightit = kbal_res)
-      kbal_res_y2 <- lm_weightit(y2 ~ treatment, data = df_long_des, weightit = kbal_res)
-      kbal_res_y3 <- lm_weightit(y3 ~ treatment, data = df_long_des, weightit = kbal_res)
+      kbal_res_y1 <- lm_weightit(fm2_y1, data = df_long_des, weightit = kbal_res)
+      kbal_res_y2 <- lm_weightit(fm2_y2, data = df_long_des, weightit = kbal_res)
+      kbal_res_y3 <- lm_weightit(fm2_y3, data = df_long_des, weightit = kbal_res)
       
-      deb_res1_y1 <- lm_weightit(y1 ~ treatment, data = df_long_des, weightit = deb_res1)
-      deb_res1_y2 <- lm_weightit(y2 ~ treatment, data = df_long_des, weightit = deb_res1)
-      deb_res1_y3 <- lm_weightit(y3 ~ treatment, data = df_long_des, weightit = deb_res1)
+      deb_res1_y1 <- lm_weightit(fm2_y1, data = df_long_des, weightit = deb_res1)
+      deb_res1_y2 <- lm_weightit(fm2_y2, data = df_long_des, weightit = deb_res1)
+      deb_res1_y3 <- lm_weightit(fm2_y3, data = df_long_des, weightit = deb_res1)
       
-      deb_res2_y1 <- lm_weightit(y1 ~ treatment, data = df_long_des, weightit = deb_res2)
-      deb_res2_y2 <- lm_weightit(y2 ~ treatment, data = df_long_des, weightit = deb_res2)
-      deb_res2_y3 <- lm_weightit(y3 ~ treatment, data = df_long_des, weightit = deb_res2)
+      deb_res2_y1 <- lm_weightit(fm2_y1, data = df_long_des, weightit = deb_res2)
+      deb_res2_y2 <- lm_weightit(fm2_y2, data = df_long_des, weightit = deb_res2)
+      deb_res2_y3 <- lm_weightit(fm2_y3, data = df_long_des, weightit = deb_res2)
       
+      ## prediction with
       ## save into one data.frame
       weightit_results <- list(ebal_res_y1, ebal_res_y2, ebal_res_y3,
                                kbal_res_y1, kbal_res_y2, kbal_res_y3,
                                deb_res1_y1, deb_res1_y2, deb_res1_y3,
                                deb_res2_y1, deb_res2_y2, deb_res2_y3)
       
-      coefs <- sapply(weightit_results, \(x) coef(x)[2])
-      cis <- lapply(weightit_results, \(x) confint(x)[2, ])
+      ## actually i do not need this but leave as an option
+      weightit_results_att <- lapply(weightit_results, avg_comparisons, variables = "treatment")
+      
+      coefs <- sapply(weightit_results_att, \(x) coef(x))
+      cis <- lapply(weightit_results_att, \(x) c(x$conf.low, x$conf.high))
       cis <- do.call("rbind", cis)
       
       weightit_df <- data.table(treat = coefs, ci_low = cis[, 1], ci_upp = cis[, 2], est = "att", tau = NA)
@@ -167,6 +189,13 @@ results_simulation1 <- foreach(
       weightit_bal[, method := names(weightit_obj)]
       weightit_bal[, est := "balance"]
       
+      ## overall
+      weightit_kernel <- sapply(weightit_obj, function(x) bal.compute(k_dist, weights = get.w(x)))
+      weightit_ks <- sapply(weightit_obj, function(x) bal.compute(ks_rms, weights = get.w(x)))
+      
+      weightit_bal[, over_kernel := weightit_kernel]
+      weightit_bal[, over_ks := weightit_ks]
+      
       ## ESS
       weightit_ess <- sapply(weightit_quality, \(x) x$Observations$Control[2])
       weightit_bal[, ess := weightit_ess]
@@ -182,5 +211,5 @@ results_simulation1 <- foreach(
 stopCluster(cl)
 
 saveRDS(results_simulation1, 
-        file = "results/sim1-ebal-updated.rds")
+        file = "results/sim1-ebal-updated-1000.rds")
 

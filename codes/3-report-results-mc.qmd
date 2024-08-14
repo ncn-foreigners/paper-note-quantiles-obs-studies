@@ -32,7 +32,10 @@ options(xtable.include.rownames = FALSE)
 # Result for the simulation 1 -- entropy balancing
 
 ```{r}
-sim1_results <- readRDS("../results/sim1-ebal-updated.rds")
+sim1_results <- readRDS("../results/sim1-ebal-updated-1000.rds")
+sim1_results[, count_rep := .N, rep] ## for 12 iterations were errors, so we remove them
+sim1_results <- sim1_results[count_rep == 228]
+sim1_results <- sim1_results[rep %in% unique(sim1_results$rep)[1:1000]] ## 500 reps
 sim1_results[is.na(tau), est_p := est]
 sim1_results[!is.na(tau), est_p := paste0(est, " (", str_pad(tau,4,"right", "0"), ")")]
 sim1_results[, est_p:=factor(est_p, 
@@ -54,8 +57,15 @@ sim1_results[var == "y3" & est_p != "bal",
   dcast(variable + method_l + design ~ est_p, value.var = "value") |> 
   {\(x) x[order(design, variable, method_l)]}() |>
   ## uncomment for xtable
-  transform(design = NULL) #|>
-  #xtable(digits = 4)
+  transform(design = NULL) |>
+  xtable(digits = 4)
+```
+
+Coverage rate for ATT based on M-Estimation
+
+```{r}
+sim1_results[est_p != "bal" & !is.na(ci_low), 
+             .(cr = mean(ci_low < 0 & ci_upp > 0)), .(design, method, var)]
 ```
 
 Balance and ESS
@@ -63,28 +73,48 @@ Balance and ESS
 ```{r}
 sim1_results[est_p == "bal", .(rep,design, method_l, x1,x2,x3,x4,x5,x6,ess)] |>
   melt(id.vars = c("rep", "design", "method_l")) |>
-  aggregate(value ~ variable + design + method_l, data = _, FUN = mean) |>
+  {\(x) x[, .(value=mean(value)), .(variable, design, method_l)]}() |>
   transform(value = ifelse(variable != "ess", value*100, value)) |>
   dcast(data=_, design + method_l ~ variable, value.var = "value") |>
+  transform(design = NULL) |>
   xtable()
 ```
 
+Additional plots on the balance
 
 ```{r}
 sim1_results[est_p == "bal", .(rep,design, method_l, x1,x2,x3,x4,x5,x6,ess)] |>
   melt(id.vars = c("rep", "design", "method_l")) |>
   subset(variable != "ess") |>
-  ggplot(data = _, aes(x = method_l, y = value)) +
+  ggplot(data = _, aes(x = method_l, y = value*100)) +
+  #geom_jitter(alpha = 0.05) + 
   geom_boxplot() +
-  facet_grid(design~variable)
+  facet_grid(design~variable, labeller = labeller(
+    design = c("d1"="D1 (strong sep, norm)",
+               "d2"="D2 (weak sep, norm)",
+               "d3"="D3 (medium sep, lep)"))) +
+  theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1)) +
+  labs(x = "Method", y = "KS statistic") -> p1
 
+ggsave(plot = p1, filename = glue("../results/fig-sim-1-balance-boxplot.png"), width = 10, height = 5)
+
+```
+
+```{r}
 sim1_results[est_p == "bal", .(rep,design, method_l, x1,x2,x3,x4,x5,x6,ess)] |>
   melt(id.vars = c("rep", "design", "method_l")) |>
   subset(variable == "ess") |>
   ggplot(data = _, aes(x = method_l, y = value)) +
-  geom_jitter(alpha=0.1) + 
+  #geom_jitter(alpha = 0.05) + 
   geom_boxplot() +
-  facet_grid(variable~design)
+  facet_wrap(~design, labeller = labeller(
+    design = c("d1"="D1 (strong sep, norm)",
+               "d2"="D2 (weak sep, norm)",
+               "d3"="D3 (medium sep, lep)"))) +
+  theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1)) +
+  labs(x = "Method", y = "ESS") -> p1
+
+ggsave(plot = p1, filename = glue("../results/fig-sim-1-ess-boxplot.png"), width = 7, height = 5)
 
 ```
 
