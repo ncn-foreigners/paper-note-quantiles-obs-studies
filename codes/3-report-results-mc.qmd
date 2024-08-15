@@ -43,7 +43,6 @@ sim1_results[, est_p:=factor(est_p,
                              c("bal", "ATT", "QTT (0.10)", "QTT (0.25)", "QTT (0.50)", "QTT (0.75)", "QTT (0.90)"))]
 
 sim1_results[, method:=str_remove(method, "w_")]
-
 sim1_results[, method_l:=factor(method, c("ebal", "kbal", "deb1", "deb2"), c("EB", "KEB", "DEB MQ", "DEB MD"))]
 ```
 
@@ -65,13 +64,17 @@ Coverage rate for ATT based on M-Estimation
 
 ```{r}
 sim1_results[est_p != "bal" & !is.na(ci_low), 
-             .(cr = mean(ci_low < 0 & ci_upp > 0)), .(design, method, var)]
+             .(cr = mean(ci_low < 0 & ci_upp > 0)*100), 
+             .(design, method_l, var)] |>
+  dcast(design + method_l ~ var,  value.var = "cr") |>
+  transform(design = NULL) |>
+  xtable()
 ```
 
 Balance and ESS
 
 ```{r}
-sim1_results[est_p == "bal", .(rep,design, method_l, x1,x2,x3,x4,x5,x6,ess)] |>
+sim1_results[est_p == "bal", .(rep,design, method_l, x1,x2,x3,x4,x5,x6,over_kernel, over_ks,ess)] |>
   melt(id.vars = c("rep", "design", "method_l")) |>
   {\(x) x[, .(value=mean(value)), .(variable, design, method_l)]}() |>
   transform(value = ifelse(variable != "ess", value*100, value)) |>
@@ -115,7 +118,6 @@ sim1_results[est_p == "bal", .(rep,design, method_l, x1,x2,x3,x4,x5,x6,ess)] |>
   labs(x = "Method", y = "ESS") -> p1
 
 ggsave(plot = p1, filename = glue("../results/fig-sim-1-ess-boxplot.png"), width = 7, height = 5)
-
 ```
 
 Table A1 in Appendix
@@ -128,8 +130,8 @@ sim1_results[var == "y1" & est_p != "bal",
   dcast(variable + method_l + design ~ est_p, value.var = "value") |> 
   {\(x) x[order(design, variable, method_l)]}() |>
   ## uncomment for xtable
-  transform(design = NULL) #|>
-  #xtable(digits = 4)
+  transform(design = NULL) |>
+  xtable(digits = 4)
 ```
 
 Table A2 in the Appendix
@@ -142,8 +144,8 @@ sim1_results[var == "y2" & est_p != "bal",
   dcast(variable + method_l + design ~ est_p, value.var = "value") |> 
   {\(x) x[order(design, variable, method_l)]}() |>
   ## uncomment for xtable
-  transform(design = NULL) #|>
-  #xtable(digits = 4)
+  transform(design = NULL) |>
+  xtable(digits = 4)
 ```
 
 Additional plots
@@ -192,184 +194,132 @@ ggsave(plot = p1, filename = glue("../results/fig-sim-1-ebal-boxplot.png"), widt
 # Result for the simulation 1 -- Propensity score
 
 ```{r}
-sim1 <- readRDS("../results/sim2-dgp1-1000.rds")
-sim2 <- readRDS("../results/sim2-dgp2-1000.rds")
+sim2_results <- readRDS("../results/sim2-cbps-1000.rds") |> setDT()
+sim2_results[is.na(tau), est_p := "ATE"]
+sim2_results[!is.na(tau), est_p := paste0("QTE", " (", str_pad(tau,4,"right", "0"), ")")]
+sim2_results[est == "balance", est_p:=NA]
+sim2_results[, est_p:=as.factor(est_p)]
+
+sim2_results[, method_l:=factor(method, 
+                                c("IPS_ind", "IPS_exp", "IPS_proj", "CBPS_j", "DPS1_j", "DPS2_j", "CBPS_o", "DPS1_o", "DPS2_o"), 
+                                c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
+                                  "CBPS (e)", "DPS (e MQ)", "DPS (e MD)", "CBPS (o)", "DPS (o MQ)", "DPS (o MD)"))]
+sim2_results[,.N, method_l]
 ```
 
-Table 2 
+Table 2  and appendix 
 
 ```{r}
-sim2$ATE |> 
-  melt(id.var = "id") |> 
-  setDT() |> 
-  {\(x) x[, .(Bias = mean(value)-10, Var = var(value), RMSE = sqrt( (mean(value)-10)^2 + var(value))), .(est=variable)]}() |> 
-  transform(quant = "ATE") |> 
-  rbind(sim2$QTE[, .(Bias = mean(value)-10, Var = var(value), RMSE = sqrt( (mean(value)-10)^2 + var(value))), 
-                 .(est, quant = factor(quant, 1:5, c("0.10", "0.25", "0.50", "0.75", "0.90")))] ) |> 
-  melt(id.vars = c("est", "quant")) |> 
-  transform(quant = factor(quant, 
-                           c("ATE", "0.10", "0.25", "0.50", "0.75", "0.90"),
-                           c("ATE", "QTE(0.10)", "QTE(0.25)", "QTE(0.50)", "QTE(0.75)", "QTE(0.90)")),
-            est = factor(est,
-                         c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
-                           "CPBS (e)", "CBPS (e MQ)", "CBPS (e MP)", "CPBS (e P)", 
-                           "CBPS (o)", "CBPS (o MQ)", "CBPS (o MP)", "CPBS (o P)"),
-                         c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
-                           "CBPS (e)", "DPS (e MQ)", "DPS (e MD)", "DPS (e D)", 
-                           "CBPS (o)", "DPS (o MQ)", "DPS (o MD)", "DPS (o D)"))) -> sim2_results2
+sim2_results |> 
+  subset(!is.na(est_p)) |>
+  {\(x) x[, .(Bias = mean(eff)-10, Var = var(eff), RMSE = sqrt( (mean(eff)-10)^2 + var(eff))), .(design=d, est_p, method_l)]}() |>
+  melt(id.vars = c("design" , "est_p", "method_l"))  |>
+  dcast(design + method_l + variable ~ est_p, value.var = "value") |>
+  {\(x) x[order(design, variable, method_l)]}() -> results_tab1
 
-sim2_results2 |>
-  dcast(variable + est ~ quant, value.var = "value") |>
-  # uncomment for xtable
-  subset(select = -variable) #|> 
-  #xtable(digits = 4) 
-  
+results_tab1 |> 
+  subset(design==1, select=-design) |> 
+  xtable(digits = 4)
+
+results_tab1 |> 
+  subset(design==2, select=-design) |> 
+  xtable(digits = 4)
+
 ```
 
-Table A3 in the Appendix
+Coverage rate for ATT based on M-Estimation
 
 ```{r}
-sim1$ATE |> 
-  melt(id.var = "id") |> 
-  setDT() |> 
-  {\(x) x[, .(Bias = mean(value)-10, Var = var(value), RMSE = sqrt( (mean(value)-10)^2 + var(value))), .(est=variable)]}() |> 
-  transform(quant = "ATE") |> 
-  rbind(sim1$QTE[, .(Bias = mean(value)-10, Var = var(value), RMSE = sqrt( (mean(value)-10)^2 + var(value))), 
-                 .(est, quant = factor(quant, 1:5, c("0.10", "0.25", "0.50", "0.75", "0.90")))] ) |> 
-  melt(id.vars = c("est", "quant")) |> 
-  transform(quant = factor(quant, 
-                           c("ATE", "0.10", "0.25", "0.50", "0.75", "0.90"),
-                           c("ATE", "QTE(0.10)", "QTE(0.25)", "QTE(0.50)", "QTE(0.75)", "QTE(0.90)")),
-            est = factor(est,
-                         c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
-                           "CPBS (e)", "CBPS (e MQ)", "CBPS (e MP)", "CPBS (e P)", 
-                           "CBPS (o)", "CBPS (o MQ)", "CBPS (o MP)", "CPBS (o P)"),
-                         c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
-                           "CBPS (e)", "DPS (e MQ)", "DPS (e MD)", "DPS (e D)", 
-                           "CBPS (o)", "DPS (o MQ)", "DPS (o MD)", "DPS (o D)")))-> sim2_results1
-
-sim2_results1 |> 
-  dcast(variable + est ~ quant, value.var = "value") |>
-  # uncomment for xtable
-  subset(select = -variable) #|> 
-  #xtable(digits = 4) 
-  
-```
-Table 3
-
-```{r}
-setnames(x = sim2$CVM, old = names(sim2$CVM), new=names(sim2$KS))
-
-sim2$CVM |> 
-  setDT() |> 
-  melt(id.vars = "id") |> 
-  {\(x) x[, .(cvm_mean=mean(value), cvm_median=median(value)), .(variable)]}() |> 
-  merge(x = _,
-        y = {sim2$KS |> 
-                setDT() |> 
-                melt(id.vars = "id") |> 
-                {\(x) x[, .(ks_mean=mean(value), ks_median=median(value)), .(variable)]}() },
-        by = "variable") |> 
-  transform(variable = factor(variable,
-                         c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
-                           "CPBS (e)", "CBPS (e MQ)", "CBPS (e MP)", "CPBS (e P)", 
-                           "CBPS (o)", "CBPS (o MQ)", "CBPS (o MP)", "CPBS (o P)"),
-                         c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
-                           "CBPS (e)", "DPS (e MQ)", "DPS (e MD)", "DPS (e D)", 
-                           "CBPS (o)", "DPS (o MQ)", "DPS (o MD)", "DPS (o D)"))) #|>
-  ## uncomment for xtable
-  #xtable() 
+sim2_results[!is.na(est_p), 
+             .(cr = mean(eff-qnorm(1-0.05/2)*eff_se < 10 & eff+qnorm(1-0.05/2)*eff_se > 0)*100), 
+             .(design=d, est_p, method_l)] |>
+  dcast(design + method_l ~ est_p,  value.var = "cr") |>
+  transform(design = NULL) |>
+  xtable()
 ```
 
-Table A4 in the Appendix
+Balance and ESS
 
 ```{r}
-setnames(x = sim1$CVM, old = names(sim1$CVM), new=names(sim1$KS))
-
-sim1$CVM |> 
-  setDT() |> 
-  melt(id.vars = "id") |> 
-  {\(x) x[, .(cvm_mean=mean(value), cvm_median=median(value)), .(variable)]}() |> 
-  merge(x = _,
-        y = {sim1$KS |> 
-                setDT() |> 
-                melt(id.vars = "id") |> 
-                {\(x) x[, .(ks_mean=mean(value), ks_median=median(value)), .(variable)]}() },
-        by = "variable") |> 
-  transform(variable = factor(variable,
-                         c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
-                           "CPBS (e)", "CBPS (e MQ)", "CBPS (e MP)", "CPBS (e P)", 
-                           "CBPS (o)", "CBPS (o MQ)", "CBPS (o MP)", "CPBS (o P)"),
-                         c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
-                           "CBPS (e)", "DPS (e MQ)", "DPS (e MD)", "DPS (e D)", 
-                           "CBPS (o)", "DPS (o MQ)", "DPS (o MD)", "DPS (o D)"))) #|>
-  ## uncomment for xtable
-  #xtable()
+sim2_results[est == "balance", .(rep,design=d, method_l, X1,X2,X3,X4, over_kernel, over_ks,sant_ks,sant_cvm, ess)] |>
+  {\(x) x[, lapply(.SD, mean), keyby=.(design, method_l), .SDcols = X1:ess]}() |>
+  transform(X1=X1*100,X2=X2*100,X3=X3*100,X4=X4*100) |>
+  transform(design = NULL) |>
+  xtable()
 ```
 
-Boxplots for highlights
-
-Simulation 1
+Additional plots on the balance
 
 ```{r}
-# id, variable, value, est
-sim1$ATE |> 
-  melt(id.vars = "id", variable.name = "est") |> 
-  transform(par = "ATE",
-            quant = "") |> 
-  rbind(
-    sim1$QTE |> 
-      subset(select = -variable) |> 
-      transform(par = "QTE")
-  ) |> 
-  transform(quant = factor(quant, 
-                           c("", "1", "2", "3", "4", "5"),
-                           c("ATE", "QTE(0.10)", "QTE(0.25)", "QTE(0.50)", "QTE(0.75)", "QTE(0.90)")),
-            est = factor(est,
-                         c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
-                           "CPBS (e)", "CBPS (e MQ)", "CBPS (e MP)", "CPBS (e P)", 
-                           "CBPS (o)", "CBPS (o MQ)", "CBPS (o MP)", "CPBS (o P)"),
-                         c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
-                           "CBPS (e)", "DPS (e MQ)", "DPS (e MD)", "DPS (e D)", 
-                           "CBPS (o)", "DPS (o MQ)", "DPS (o MD)", "DPS (o D)"))) |> 
-  ggplot(data = _, aes(x = est, y = value)) +
+sim2_results[est == "balance", .(rep, design=d, method_l, 
+                                 sant_ks,sant_cvm
+                                 #X1, X2, X3, X4, over_kernel, over_ks
+                                 )] |>
+  melt(id.vars = c("rep", "design", "method_l")) |>
+  ggplot(data = _, aes(x = method_l, y = value)) +
+  #geom_jitter(alpha = 0.05) + 
   geom_boxplot() +
-  facet_wrap(~quant, nrow = 1) +
-  theme(axis.text.x = element_text(angle = 45, vjust=1,hjust=1, size = 6)) +
-  geom_hline(yintercept = 10, color = "red", linetype="dashed") +
-  labs(x = "Method", y = "Value", title = "Design 1: correctly specified models") -> p1
+  facet_grid(variable~design, labeller = labeller(
+    design = c("1"="Design 1",
+               "2"="Design 2 (mis-specified)"),
+    variable = c("sant_ks"="KS",
+                 "sant_cvm"="CVM"))) +
+  theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1)) +
+  labs(x = "Method", y = "Statistic") -> p1
 
-ggsave(plot = p1, filename = glue("../results/fig-sim-2-dbps-design-1.png"), width = 7, height = 5)
+ggsave(plot = p1, filename = glue("../results/fig-sim-2-balance-sant.png"), width = 7, height = 5)
 ```
-Simulation 2 
 
 ```{r}
-sim2$ATE |> 
-  melt(id.vars = "id", variable.name = "est") |> 
-  transform(par = "ATE",
-            quant = "") |> 
-  rbind(
-    sim2$QTE |> 
-      subset(select = -variable) |> 
-      transform(par = "QTE")
-  ) |> 
-  transform(quant = factor(quant, 
-                           c("", "1", "2", "3", "4", "5"),
-                           c("ATE", "QTE(0.10)", "QTE(0.25)", "QTE(0.50)", "QTE(0.75)", "QTE(0.90)")),
-            est = factor(est,
-                         c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
-                           "CPBS (e)", "CBPS (e MQ)", "CBPS (e MP)", "CPBS (e P)", 
-                           "CBPS (o)", "CBPS (o MQ)", "CBPS (o MP)", "CPBS (o P)"),
-                         c("IPS (exp)", "IPS (ind)", "IPS (proj)", 
-                           "CBPS (e)", "DPS (e MQ)", "DPS (e MD)", "DPS (e D)", 
-                           "CBPS (o)", "DPS (o MQ)", "DPS (o MD)", "DPS (o D)"))) |> 
-  ggplot(data = _, aes(x = est, y = value)) +
+sim2_results[est == "balance", .(rep, design=d, method_l, 
+                                 #sant_ks,sant_cvm
+                                 X1, X2, X3, X4#, over_kernel, over_ks
+                                 )] |>
+  melt(id.vars = c("rep", "design", "method_l")) |>
+  ggplot(data = _, aes(x = method_l, y = value)) +
+  #geom_jitter(alpha = 0.05) + 
   geom_boxplot() +
-  facet_wrap(~quant, nrow = 1) +
-  theme(axis.text.x = element_text(angle = 45, vjust=1,hjust=1, size = 6)) +
-  geom_hline(yintercept = 10, color = "red", linetype="dashed") +
-  labs(x = "Method", y = "Value", title = "Design 2: mis-specified models") -> p2
+  facet_grid(variable~design, labeller = labeller(
+    design = c("1"="Design 1",
+               "2"="Design 2 (mis-specified)"))) +
+  theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1)) +
+  labs(x = "Method", y = "KS Statistic") -> p1
 
-ggsave(plot = p2, filename = glue("../results/fig-sim-2-dbps-design-2.png"), width = 7, height = 5)
+ggsave(plot = p1, filename = glue("../results/fig-sim-2-balance-weight.png"), width = 7, height = 5)
+```
+
+
+```{r}
+sim2_results[est == "balance", .(rep, design=d, method_l, 
+                                 over_kernel, over_ks
+                                 )] |>
+  melt(id.vars = c("rep", "design", "method_l")) |>
+  ggplot(data = _, aes(x = method_l, y = value)) +
+  #geom_jitter(alpha = 0.05) + 
+  geom_boxplot() +
+  facet_grid(variable~design, labeller = labeller(
+    design = c("1"="Design 1",
+               "2"="Design 2 (mis-specified)"),
+    variable = c("over_kernel"="Kernel distance",
+                 "over_ks"="KS statistic"))) +
+  theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1)) +
+  labs(x = "Method", y = "Measure") -> p1
+
+ggsave(plot = p1, filename = glue("../results/fig-sim-2-balance-weight-overall.png"), width = 7, height = 5)
+```
+
+```{r}
+sim2_results[est == "balance", .(rep,design=d, method_l, ess)] |>
+  melt(id.vars = c("rep", "design", "method_l")) |>
+  ggplot(data = _, aes(x = method_l, y = value)) +
+  #geom_jitter(alpha = 0.05) + 
+  geom_boxplot() +
+  facet_wrap(~design, labeller = labeller(
+    design = c("1"="Design 1",
+               "2"="Design 2 (mis-specified)"))) +
+  theme(axis.text.x = element_text(angle=45, vjust=1, hjust=1)) +
+  labs(x = "Method", y = "ESS") -> p1
+
+ggsave(plot = p1, filename = glue("../results/fig-sim-2-ess-boxplot.png"), width = 7, height = 5)
 ```
 
